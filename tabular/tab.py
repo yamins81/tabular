@@ -196,8 +196,8 @@ class tabarray(np.ndarray):
     groups of columns.
 
     tabarray supports several i/o methods to/from a number of file formats, 
-    including (separated variable) text (e.g. ``.txt``, ``.tsv``, ``.csv``), 
-    numpy binary (``.npz``) and hierarchical separated variable (``.hsv``).
+    including (separated variable) text (e.g. ``.txt``, ``.tsv``, ``.csv``)
+    and numpy binary (``.npz``).
 
     Added functionality includes spreadsheet style operations such as "pivot", 
     "aggregate" and "replace".
@@ -207,7 +207,7 @@ class tabarray(np.ndarray):
     """
 
     def __new__(subtype, array=None, records=None, columns=None, SVfile=None, 
-                binary=None, HSVfile=None, HSVlist=None, shape=None, 
+                binary=None, shape=None, 
                 dtype=None, formats=None, names=None, titles=None, 
                 aligned=False, byteorder=None, buf=None, offset = 0,
                 strides = None, comments=None, delimiter=None, 
@@ -287,37 +287,6 @@ class tabarray(np.ndarray):
 
                         **See also:** :func:`savebinary`, 
                         :func:`tabular.io.loadbinary`
-
-                **HSVfile** :  string
-
-                        File path to a hierarchical separated variable 
-                        (``.hsv``) directory, or a comma separated variable 
-                        (``.csv``) text file inside of a HSV directory 
-                        corresponding to a single column of data.  Load a 
-                        structured directory or single file defined by the 
-                        :func:`saveHSV` method by calling::
-
-                                tabular.io.loadHSV(HSVfile, toload)
-
-                        **See also:** :func:`saveHSV`, 
-                        :func:`tabular.io.loadHSV`, 
-                        :func:`tabular.io.loadHSVlist`
-
-                **HSVlist** :  list of strings
-
-                        List of file paths to hierarchical separated variable
-                        (``.hsv``) files and/or individual comma separated
-                        variable (``.csv``) text files inside of HSV 
-                        directories, all with the same number of records.  Load 
-                        a list of file paths created by the :func:`saveHSV` 
-                        method by calling::
-
-                                tabular.io.loadHSVlist(HSVlist)
-
-                        **See also:**  :func:`saveHSV`,  
-                        :func:`tabular.io.loadHSV`, 
-                        :func:`tabular.io.loadHSVlist`
-
 
         **Additional parameters:**
                 
@@ -441,10 +410,6 @@ class tabarray(np.ndarray):
 
                    *	Colorings can be inferred from the input data:
 
-                        *	If constructing from a ``.hsv`` directory, 
-                        	colorings will be automatically inferred from the 
-                        	directory tree.
-
                         *	If constructing from a CSV file (e.g. ``.tsv``, 
                         	``.csv``) created by :func:`saveSV`, colorings are 
                         	automatically parsed from the header when present.
@@ -457,9 +422,7 @@ class tabarray(np.ndarray):
                 **wrap**:  string
 
                         Adds a color with name  *wrap* listing all column 
-                        names. (When this  :class:`tabarray` is saved to a
-                        ``.hsv`` directory, all columns will be nested in an
-                        additional directory, ``wrap.hsv``.)
+                        names. 
 
                 **verbosity** :  integer, optional
 
@@ -536,21 +499,6 @@ class tabarray(np.ndarray):
             DataObj = utils.fromrecords(DataObj, type=np.ndarray, dtype=dtype, shape=shape,   
                       formats=formats, names=names, titles=titles, 
                       aligned=aligned, byteorder=byteorder)
-        elif not HSVfile is None:
-            chkExists(HSVfile)
-            # The returned DataObj is a list of numpy arrays.
-            [DataObj, givennames, givencoloring] = \
-                                        io.loadHSV(path=HSVfile, toload=toload)
-            if (names is None) and (not givennames is None):
-                names = givennames
-            if (coloring is None) and (not givencoloring is None):
-                coloring = givencoloring
-            DataObj = utils.fromarrays(DataObj, type=np.ndarray, dtype=dtype, shape=shape, 
-                      formats=formats, names=names, titles=titles, 
-                      aligned=aligned, byteorder=byteorder)
-        elif not HSVlist is None:
-            [chkExists(x) for x in HSVlist]
-            return io.loadHSVlist(flist=HSVlist)
         else:
             DataObj = np.core.records.recarray.__new__(
                       subtype, shape, dtype=dtype, 
@@ -762,83 +710,6 @@ class tabarray(np.ndarray):
         io.savebinary(fname=fname, X=self, savecoloring=savecoloring)
     savebinary.func_doc = modifydocs(savebinary, io.savebinary, 
                                      ":func:`tabular.io.savebinary`")
-
-    def saveHSV(self, fname, printheaderfile=True):
-        """
-        Save the tabarray to a hierarchical separated variable (HSV) directory.
-        
-        Save the tabarray to a ``.hsv`` directory.  Each column is saved as a 
-        separate comma-separated variable file (``.csv``), whose name includes 
-        the column name and data type of the column (e.g. ``name.int.csv``, 
-        ``name.float.csv``, ``name.str.csv``).
-
-        Hierarchical structure on the columns, i.e. :attr:`coloring`, is
-        preserved by the file directory structure, with subdirectories named 
-        ``color.hsv`` and containing ``.csv`` files corrseponding to columns of 
-        data grouped by that color.
-
-        Finally, :attr:`rowdata` is stored as a dump of a pickled object in the 
-        top level directory `fname`.
-
-        The ``.hsv`` can later be loaded back by passing the file path `fname` 
-        to the `HSV` argument of the :class:`tabarray` constructor.
-
-        Method wraps::
-
-                tabular.io.saveHSV(fname, self, printheaderfile)
-
-        """
-        io.saveHSV(fname=fname, X=self, printheaderfile=printheaderfile)
-    saveHSV.func_doc = modifydocs(saveHSV, io.saveHSV, 
-                                  ":func:`tabular.io.saveHSV`")
-
-    def savecolumns(self, fname):
-        """
-        Save the tabarray to a set of flat ``.csv`` files, one per column. 
-        
-        Save the tabarray to a set of flat ``.csv`` files in ``.hsv`` format 
-        (e.g. ``.int.csv``, ``.float.csv``, ``.str.csv``).  Note that data in 
-        the *coloring* attribute is lost.
-
-        Method wraps::
-
-                tabular.io.savecolumns(fname, self)
-
-        """
-        io.savecolumns(fname=fname, X=self)
-    savecolumns.func_doc = modifydocs(savecolumns, io.savecolumns, 
-                                      ":func:`tabular.io.savecolumns`")
-
-    def appendHSV(self, fname, order=None):
-        """
-        Append the tabarray to an existing on-disk HSV representation.
-        
-        Like :func:`saveHSV` but for appending instead of writing from scratch.
-
-        Method wraps::
-
-                tabular.io.appendHSV(fname, self, order)
-
-        """
-        io.appendHSV(fname=fname, RecObj=self, order=order)
-    appendHSV.func_doc = modifydocs(appendHSV, io.appendHSV, 
-                                    ":func:`tabular.io.appendHSV`")
-
-    def appendcolumns(self, fname, order=None):
-        """
-        Append the tabarray to an existing on-disk flat HSV representation.
-        
-        Like :func:`savecolumns` but for appending instead of writing from 
-        scratch.
-
-        Method wraps::
-
-                tabular.io.appendcolumns(fname, self, order)
-
-        """
-        io.appendcolumns(fname=fname, RecObj=self, order=order)
-    appendcolumns.func_doc = modifydocs(appendcolumns, io.appendcolumns, 
-                                        ":func:`tabular.io.appendcolumns`")
 
     def colstack(self, new, mode='abort'):
         """
