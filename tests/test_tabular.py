@@ -181,6 +181,7 @@ def test_colstack_renaming():
     Z2 = tb.tabarray(columns = [['a','b'],[1,2],['c','d'],[3,4]],names = ['A_0','B_0','A_1','B_1'],coloring={'Categories':['A_0','A_1']})
     assert eq(Z,Z2)
 
+
 class TestBasic(TesterCore):
 
     def setUp(self):
@@ -345,8 +346,9 @@ class TestAddCols(unittest.TestCase):
                                      'Population', 'Importance', 'Modernized'])
         self.n1 = 'Importance'
         self.n2 = 'Modernized'
-        self.X = self.Y[[o for o in self.Y.dtype.names 
-                         if o != self.n1 and o != self.n2]]
+        oklist = [o for o in self.Y.dtype.names 
+                         if o not in [self.n1, self.n2]]
+        self.X = self.Y[oklist]
 
     def test_1(self):
         Y = self.X.addcols(self.Y[self.n1], names=self.n1)
@@ -1201,11 +1203,15 @@ def nullvalue(test):
            else ''
 
 def eq(x,y):
-# x and y are tb.tabarrays
+    """
+    this special definition of equality is used for checking equality of 
+    arrays that might have NaNs. 
+    """
     if x.dtype != y.dtype:
         return False
     else:
-        b = all([((x[a] == y[a]) | (np.isnan(x[a]) & np.isnan(y[a]))).all() if (type(np.isnan(x[a])) != types.NotImplementedType and type(np.isnan(y[a])) != types.NotImplementedType) else (x[a] == y[a]).all() for a in x.dtype.names])
+        b = all([(x[a] == y[a]).all() for a in x.dtype.names])
+        #b = all([((x[a] == y[a]) | (np.isnan(x[a]) & np.isnan(y[a]))).all() if (type(np.isnan(x[a])) != types.NotImplementedType and type(np.isnan(y[a])) != types.NotImplementedType) else (x[a] == y[a]).all() for a in x.dtype.names])
         if b:
             return ColorEq(x, y)
         else:
@@ -1214,6 +1220,7 @@ def eq(x,y):
 def ColorEq(x, y):
     return x.coloring.keys() == y.coloring.keys()  and \
          all([x[k].dtype.names == y[k].dtype.names for k in x.coloring.keys()])
+         
 
 def eq3(X):
     return (all(X.A == X.A1) and all(X.R == X.R1) and all(X.D == X.D1))
