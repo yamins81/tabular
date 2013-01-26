@@ -1150,12 +1150,16 @@ def eq(x,y):
     if x.dtype != y.dtype:
         return False
     else:
-        b = all([(x[a] == y[a]).all() for a in x.dtype.names])
-        #b = all([((x[a] == y[a]) | (np.isnan(x[a]) & np.isnan(y[a]))).all() if (type(np.isnan(x[a])) != types.NotImplementedType and type(np.isnan(y[a])) != types.NotImplementedType) else (x[a] == y[a]).all() for a in x.dtype.names])
-        if b:
-            return ColorEq(x, y)
-        else:
-            return False
+        names = x.dtype.names        
+        for a in names:
+            try:
+                b = ((np.isnan(x[a]) == np.isnan(y[a])) | (x[a] == y[a])).all()
+            except NotImplementedError:
+                b = (x[a] == y[a]).all()
+            if b is False:
+            	return b        
+        return ColorEq(x, y)
+
 
 def ColorEq(x, y):
     return x.coloring.keys() == y.coloring.keys()  and \
