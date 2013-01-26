@@ -484,7 +484,6 @@ class tabarray(np.ndarray):
                         	on that method).
        
         """
-
         metadata = {}
         if not array is None:
             if len(array) > 0:
@@ -586,7 +585,6 @@ class tabarray(np.ndarray):
 
         return DataObj
         
-
     def __array_finalize__(self, obj):
         """
         Set default attributes (e.g. `coloring`) if `obj` does not have them.
@@ -595,6 +593,12 @@ class tabarray(np.ndarray):
 
         """
         self.coloring = getattr(obj, 'coloring', {})
+        
+    def __array_wrap__(self, arr, context=None):
+        if arr.ndim == 0:
+            pass
+        else:
+            return arr
 
     def extract(self):
         """
@@ -646,8 +650,8 @@ class tabarray(np.ndarray):
                                           else self.coloring[a] for a in ind]))
             return self[ns]
         else:
-            D = np.ndarray.__getitem__(self,ind)
-            if isinstance(D,np.ndarray) and not D.dtype.names is None:
+            D = np.ndarray.__getitem__(self, ind)
+            if isinstance(D, np.ndarray) and not (D.dtype.names is None):
                 D = D.view(tabarray)
                 D.coloring = dict([(k, 
                 list(set(self.coloring[k]).intersection(set(D.dtype.names)))) 

@@ -243,7 +243,7 @@ def strictaggregate(X,On,AggList,returnsort=False):
     AggColDict = dict([(o,[f(X[g][Diffs[i]+1:Diffs[i+1]+1]) if argcounts[o] == 1 else f(X[g][Diffs[i]+1:Diffs[i+1]+1],X) for i in range(len(Diffs) - 1)]) for (o,f,g) in AggList])
     
     if isinstance(AggColDict[AggList[0][0]][0],list) or isinstance(AggColDict[AggList[0][0]][0],np.ndarray):
-        lens = [len(l) for l in AggColDict[AggList[0][0]]]
+        lens = map(len, AggColDict[AggList[0][0]])
         OnCols = OnCols.repeat(lens)
         for o in AggColDict.keys():
             AggColDict[o] = utils.listunion(AggColDict[o])
