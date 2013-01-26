@@ -54,15 +54,14 @@ class TesterCore(unittest.TestCase):
     def test_save_load_TSV(self):
         fname = TestDataDir + self.Root + '.tsv'
         print fname
-        self.D.saveSV(fname, metadata=True)
+        self.D.saveSV(fname, metadata=['names', 'formats', 'types', 'coloring', 'dialect'])
         D = tb.tabarray(SVfile = fname)
         self.assert_io(eq(self.D, D), fname)
 
     def test_save_load_CSV(self):
         fname = TestDataDir + self.Root + '.csv'
-        self.D.saveSV(fname, metadata=True)
+        self.D.saveSV(fname, metadata=['names', 'formats', 'types', 'coloring', 'dialect'])
         D = tb.tabarray(SVfile = fname)
-        print self.D, D, self.D.dtype, D.dtype
         self.assert_io(eq(self.D, D), fname)
 
     def test_save_load_binary(self):
@@ -205,21 +204,20 @@ class TestBasic(TesterCore):
         self.assert_(all(D['d'] == x))
 
     def test_toload_tsv(self):
-        toload = ['boo', 'c']
+        toload = ['c', 'boo']
         fname = TestDataDir + self.Root + '5.tsv'
-        self.D.saveSV(fname, metadata=True)
+        self.D.saveSV(fname, metadata=['names', 'formats', 'types', 'coloring', 'dialect'])
         D = tb.tabarray(SVfile=fname, usecols=toload)
-        print D,D.coloring, self.D[toload],self.D[toload].coloring        
-        self.assert_io(eq(self.D[toload], D), fname)
+        assert set(D.dtype.names) == set(['c'] + D.coloring['boo'])
+        self.assert_io(eq(self.D[toload], D[toload]), fname)
 
     def test_toload_redundant_tsv(self):
         toload = ['a', 'boo']
         fname = TestDataDir + self.Root + '6.tsv'
-        self.D.saveSV(fname, metadata=True)
+        self.D.saveSV(fname, metadata=['names', 'formats', 'types', 'coloring', 'dialect'])
         D = tb.tabarray(SVfile=fname, usecols=toload)
-        print D.coloring, D.dtype.names
-        print self.D[toload].coloring, self.D[toload].dtype.names
-        self.assert_io(eq(self.D[toload], D), fname)
+        assert set(D.dtype.names) == set(D.coloring['boo'])
+        self.assert_io(eq(self.D[toload], D[toload]), fname)
 
     def test_aggregate_AggFunc(self):
         AggFunc=np.mean
