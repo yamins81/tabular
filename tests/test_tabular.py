@@ -77,46 +77,6 @@ class TesterCore(unittest.TestCase):
         D = tb.tabarray(binary = fname)
         self.assert_io(all(self.D == D), fname)
 
-    def test_save_load_HSV(self):
-        fname = TestDataDir + self.Root + '.hsv/'
-        self.D.saveHSV(fname)
-        D = tb.tabarray(HSVfile = fname)
-        self.assert_io(eq(self.D, D), fname)
-
-    def test_appendHSV_nocoloring(self):
-        fname = TestDataDir + self.Root + '1.hsv/'
-        D1 = self.D.copy()
-        D1.coloring = {}
-        ind = len(D1)/2
-        D1[:ind].saveHSV(fname)
-        D1[ind:].appendHSV(fname)
-        D2 = tb.tabarray(HSVfile = fname)
-        self.assert_io(eq(D1, D2), fname)
-
-    def test_savecolumns(self):
-        fname = TestDataDir + self.Root + '2.hsv/'
-        makedir(fname)
-        D1 = self.D.copy()
-        D1.coloring = {}
-        names = list(D1.dtype.names)
-        ind = len(names)/2
-        D1[names[:ind]].savecolumns(fname)
-        D1[names[ind:]].savecolumns(fname)
-        F = open(fname + 'header.txt', 'w')
-        F.write('\n'.join(names))
-        F.close()
-        D2 = tb.tabarray(HSVfile = fname)
-        self.assert_io(eq(D1, D2), fname)
-
-    def test_appendHSV_coloring(self):
-        fname = TestDataDir + self.Root + '3.hsv/'
-        D1 = self.D.copy()
-        ind = len(D1)/2
-        D1[:ind].saveHSV(fname)
-        D1[ind:].appendHSV(fname)
-        D2 = tb.tabarray(HSVfile = fname)
-        self.assert_io(eq(D1, D2), fname)
-
     def test_addrecords_tuple(self):
         D = self.D[:-1].copy()
         x = self.D[-1].tolist()
@@ -196,8 +156,9 @@ class TestBasic(TesterCore):
         self.D = None
         self.Root = None
 
-    def test_getitem_list_order(self):
-        self.assert_(eq(self.D[['a', 'b']], self.D[['b', 'a']]))
+    def test_getitem_list_order(self):  
+        assert self.D[['a', 'b']].dtype.names == ('a', 'b')
+        assert self.D[['b', 'a']].dtype.names == ('b', 'a')
 
     def test_getitem_color(self):
         self.assert_(eq(self.D['moo'], self.D[['a', 'b']]))
@@ -251,13 +212,6 @@ class TestBasic(TesterCore):
         print D,D.coloring, self.D[toload],self.D[toload].coloring        
         self.assert_io(eq(self.D[toload], D), fname)
 
-    def test_toload_hsv(self):
-        toload = ['boo', 'c']
-        fname = TestDataDir + self.Root + '5.hsv/'
-        self.D.saveHSV(fname)
-        D = tb.tabarray(HSVfile=fname, toload=toload)
-        self.assert_io(eq(self.D[toload], D), fname)
-
     def test_toload_redundant_tsv(self):
         toload = ['a', 'boo']
         fname = TestDataDir + self.Root + '6.tsv'
@@ -265,13 +219,6 @@ class TestBasic(TesterCore):
         D = tb.tabarray(SVfile=fname, usecols=toload)
         print D.coloring, D.dtype.names
         print self.D[toload].coloring, self.D[toload].dtype.names
-        self.assert_io(eq(self.D[toload], D), fname)
-
-    def test_toload_redundant_hsv(self):
-        toload = ['a', 'boo']
-        fname = TestDataDir + self.Root + '6.hsv/'
-        self.D.saveHSV(fname)
-        D = tb.tabarray(HSVfile=fname, toload=toload)
         self.assert_io(eq(self.D[toload], D), fname)
 
     def test_aggregate_AggFunc(self):
