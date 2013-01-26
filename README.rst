@@ -1,8 +1,3 @@
-.. tabular documentation master file, created by
-   sphinx-quickstart on Fri Jul 31 14:01:36 2009.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Tabular
 ==========
 Tabular data can be easily represented in Python using the language's native objects -- e.g. by lists of tuples representing the records of the data set.    Though easy to create, these kind of representations typically do not enable important tabular data manipulations, like efficient column selection, matrix mathematics, or spreadsheet-style operations. 
@@ -24,58 +19,20 @@ Download
 
 Download the latest release of tabular from the Python Package Index (PyPi):  http://pypi.python.org/pypi/tabular/.    
 
-Tabular requires Python 2.5 or higher but is not tested with Python 3k.  Tabular **requires** NumPy v1.3 or higher.  Any earlier version WILL NOT WORK.
+Tabular requires Python 2.6 or higher, but will not work with Python 3k (since NumPy itself is not ported to Py3k).  Tabular **requires** NumPy v1.6 or higher.  Any earlier version WILL NOT WORK.
 
 Once these dependencies are installed, you can simply go to the Tabular source directory in your terminal and run the command "python setup.py install" (see `Installing Python Modules <http://docs.python.org/install/index.html>`_).
 
-You can also clone our mercurial (hg) repository from bitbucket:  http://bitbucket.org/elaine/tabular/.   You can report bugs, make suggestions, submit pull requests, and follow an RSS from our bitbucket site.  
+You can also clone our github repository: https://github.com/yamins81/tabular.   You can report bugs, make suggestions, submit pull requests, and follow an RSS from our github site.  
 
 
 Quickstart
 ---------------------
 
-Get started using tabular quickly: 
-
-.. toctree::
-	:maxdepth: 2	
-
-	reference/quickstart
+See ...
 
 
-Reference
+Documentation
 --------------------------------
 
-Tutorial-style reference covering most asepcts of normal usage in some detail. 
-
-.. toctree::
-	:maxdepth: 2	
-
-	reference/organization
-	reference/construction
-	reference/io
-	reference/operations
-	reference/hierarchical
-	reference/fastops
-	reference/web
-	
-Code Documentation
-------------------------------------
-
-Detailed documentation for Tabular functions and the tabarray class.  See the "Reference" section above for basic usage tutorials and examples.  The main class in tabular is :class:`tabular.tabarray.tabarray` in the :mod:`tabular.tabarray` module. Many of its methods are wrappers for functions contained in the other modules, e.g. the tabarray constructor, :func:`tabular.tabarray.tabarray.__new__` is a unified wrapper for the various load methods in the :mod:`tabular.io` module. 
-
-.. toctree::
-	:maxdepth: 2
-	
-	modules/tabular.tab
-	modules/tabular.io
-	modules/tabular.spreadsheet
-	modules/tabular.fast
-	modules/tabular.colors
-	modules/tabular.web
-	modules/tabular.utils
-
-Index of functions and modules:
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+See ...
