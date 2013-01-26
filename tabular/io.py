@@ -1488,7 +1488,7 @@ def loadbinary(fname):
     """
 
     X = np.load(fname)
-    if isinstance(X, np.lib.io.NpzFile):
+    if isinstance(X, np.lib.npyio.NpzFile):
         if 'coloring' in X.files:
             coloring = X['coloring'].tolist()
         else:
