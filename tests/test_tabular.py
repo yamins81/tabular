@@ -274,13 +274,6 @@ class TestBasic(TesterCore):
         D = tb.tabarray(HSVfile=fname, toload=toload)
         self.assert_io(eq(self.D[toload], D), fname)
 
-    def test_load_HSVlist(self):
-        fname = TestDataDir + self.Root + '0.hsv/'
-        self.D.saveHSV(fname)
-        flist = [fname + f for f in ['boo.hsv/', 'c.str.csv']]
-        D = tb.tabarray(HSVlist = flist)
-        self.assert_io(all(self.D['boo'].colstack(D[['c']]) == D), fname)
-
     def test_aggregate_AggFunc(self):
         AggFunc=np.mean
         [D1,s] = self.D[['a', 'b', 'e']].aggregate(
