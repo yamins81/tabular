@@ -26,13 +26,6 @@ Once these dependencies are installed, you can simply go to the Tabular source d
 You can also clone our github repository: https://github.com/yamins81/tabular.   You can report bugs, make suggestions, submit pull requests, and follow an RSS from our github site.  
 
 
-Quickstart
----------------------
-
-See ...
-
-
 Documentation
 --------------------------------
-
-See ...
+http://web.mit.edu/yamins/www/tabular/
