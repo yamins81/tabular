@@ -513,9 +513,9 @@ class TestJoin(unittest.TestCase):
         Y1 = X[['Region', 'Sector', 'Amount']].copy()
         Y2 = X[['Region', 'Sector', 'Modernized']].copy()
         Y1.renamecol('Amount', 'Modernized')
-        Z = Y1.join(Y2,keycols=['Region', 'Sector'])
+        Z = Y1.join(Y2, keycols=['Region', 'Sector'])
 
-        Z1 = X[['Region', 'Sector', 'Modernized', 'Amount']]
+        Z1 = X[['Region', 'Sector', 'Amount', 'Modernized']]
         Z1.sort()
         Z1.renamecol('Amount', 'Modernized_0')
         Z1.renamecol('Modernized', 'Modernized_1')
