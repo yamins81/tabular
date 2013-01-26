@@ -10,8 +10,7 @@ Tabular data can be easily represented in Python using the language's native obj
 *	sophisticated inference algorithms for determining formatting parameters and data types of input files
 *	support for hierarchical groupings of columns, both as data structures and file formats
 
-**Note to NumPy Users:**  The **tabarray** object is based on the `ndarray <http://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html?highlight=ndarray#numpy.ndarray>`_ object from the Numerical Python package (`NumPy <http://numpy.scipy.org/>`_), and the Tabular package is built to interface well with NumPy in general.  In particular, users of NumPy can get many of the benefits of Tabular, e.g. the spreadsheet-style operations, without having replace their usual NumPy objects with tabarrays, since most of the useful functional pieces of Tabular are written to work directly on NumPy ndarrays and record arrays (see :ref:`relation-to-numpy`).
-
+**Note to NumPy Users:**  The **tabarray** object is based on the `ndarray <http://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html?highlight=ndarray#numpy.ndarray>`_ object from the Numerical Python package (`NumPy <http://numpy.scipy.org/>`_), and the Tabular package is built to interface well with NumPy in general.  In particular, users of NumPy can get many of the benefits of Tabular, e.g. the spreadsheet-style operations, without having replace their usual NumPy objects with tabarrays, since most of the useful functional pieces of Tabular are written to work directly on NumPy ndarrays and record arrays (see `relationship to NumPy<http://web.mit.edu/yamins/www/tabular/reference/organization.html#relation-to-numpy>`_).
 
 
 Download
