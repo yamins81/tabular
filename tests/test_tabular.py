@@ -405,7 +405,7 @@ class TestJoin(unittest.TestCase):
         Y1.renamecol('Amount', 'Modernized')
         Z = spreadsheet.join([Y1, Y2], ['Region', 'Sector'])
 
-        Z1 = self.X[['Region', 'Sector', 'Modernized', 'Amount']]
+        Z1 = self.X[['Region', 'Sector', 'Amount', 'Modernized']]
         Z1.sort()
         Z1.renamecol('Amount', 'Modernized_0')
         Z1.renamecol('Modernized', 'Modernized_1')
