@@ -1,0 +1,12 @@
+digraph G {
+	tabarray -> spreadsheet;
+	tabarray -> io;
+	tabarray -> utils;
+	spreadsheet -> fast;
+	spreadsheet -> utils;
+	spreadsheet -> colors;
+	fast -> utils;
+	web -> colors;
+	web -> utils;
+	web -> tabarray;
+	}

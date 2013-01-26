@@ -1,0 +1,13 @@
+{% extends "!layout.html" %}
+{% block rootrellink %}
+    <li><a href="/">entabular.com</a> &raquo;</li>
+    {{ super() }}
+{% endblock %}
+
+{%- block sidebarlogo %}
+{%- if logo %}
+<p class="logo"><a href="/">
+  <img class="logo" src="{{ pathto('_static/' + logo, 1) }}" alt="Logo"/>
+</a></p>
+{%- endif %}
+{%- endblock %}

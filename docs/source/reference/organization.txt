@@ -1,0 +1,73 @@
+.. _organization:
+
+The Organization of the Tabular Package 
+============================================
+
+.. _relation-to-numpy:
+
+Relation To NumPy
+----------------------------------------
+
+The Tabular package is a small extension of the vast Numerical Python (NumPy) package.    The main object is the :class:`tabular.tabarray.tabarray` class, a container for tabular data.   The tabarray class is a subclass of `numpy.ndarray <http://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html?highlight=ndarray#numpy.ndarray>`_, and as such inherits the powerful indexing, filtering, and mathematical routines from the ndarray class.  However, tabarray extends ndarray by providing:
+
+	* extra structure for supporting hierarchical grouping of columns (both in-memory and a hierarchical format for saving to disk)
+	* a single unified construction method, as well as built-in type inference routines, to make it easier to construct arrays from many types of in-memory data objects and on-disk file formats
+	* support for input/output to a variety of file formats, including HTML and common tabular formats that are too "dirty" to be handled by existing NumPy file-read methods
+	* spreadsheet-style operations (e.g. aggregate, replace, pivot tables)
+	* a set of highly optimized algorithms for common manipulations and comparisons of tabular data
+	
+A key point is: **NumPy users can access most of this functionality just using their usual NumPy objects, without having to use the tabarray object instead**.   This is because we've written Tabular on a "tabarray agnostic" principle:  most of our functions are written to work on ndarrays and recarrays directly, and do not depend on the tabarray object in any way.  
+
+This is true for all functions in :mod:`tabular.spreadsheet` and :mod:`tabular.fast` -- which can be thought of as "pure NumPy" modules.   For instance, the function :func:`tabular.spreadsheet.aggregate` can be used to aggregate Numpy ndarrays and recarrays, without having to first recast the data in the tabarray class.  
+
+Only after having first written a "purely NumPy" version of an operation do we then attach it as a methods of the tabarray object (so that those who *do* want to use tabarray can access them conveniently), and add whatever small modifications to handle tabarray's additional structure.    For instance, the tabarray method :func:`tabular.tabarray.tabarray.aggregate` is based on :func:`tabular.spreadsheet.aggregate`, but adds handling of the `coloring` attribute for hierarchical structure. 
+
+
+Module Dependencies
+-------------------------------------------
+
+The tabular package includes the following modules of interest:
+
+	* tabarray.py, which contains the main :class:`tabular.tabarray.tabarray` class
+	* spreadsheet.py, which contains the spreadsheet-style operations
+	* io.py, which contains routines for input/output from various file formats
+	* fast.py, which contains highly optimized algorithms for common tabular comparisons and manipulations 
+	* web.py, which contains routines for producing HTML representations of tabular data.
+
+The package also contains the modules utils.py and colors.py, containing common utility functions used by the rest of the code, but which are not in themselves likely to be interesting to most users.
+	
+The dependencies are:    
+
+	* tabarray.py --> spreadsheet.py, io.py, utils.py
+	* spreadsheet.py --> fast.py, utils.py, colors.py
+	* fast.py --> utils.py
+	* web.py --> colors.py, utils.py, tabarray.py
+	
+.. image:: images/organization.png
+
+
+Design Philosophy
+----------------------------------------
+
+Though **tabular** is an extension of NumPy, it differs from it in one important "philosophical" regard.  
+
+Functions that construct highly-structured data objects (e.g. NumPy ndarrays) from less-highly structured objects (e.g. Python lists), often require additional information to resolve possible ambiguities (e.g. information about the data-type of columns or the presence of column names in a header line). 
+
+In designing interfaces to such functions, there are two approaches to handling ambiguity resolution.  One is the "explicit" approach, in which the user is required to supply extra information via arguments to the function, there are comparatively few default settings, and those defaults settings that are provided are relatively simple and determined independently of the input data.   An example of this approach is the NumPy **loadtxt** function to construct ndarrays from delimited text files, which requires the user to prespecify a datatype for each column in the arguments to the function. 
+
+The explicit approach is clean, simple, modular, and comparatively easy to design well.  It provides a good framework on which to build extensions, and makes it easy to document the relevant features of the API automatically. However, very explicit interfaces can be cumbersome to use, since they will often require a fair amount of typing, thinking, and inspection even to handle common simple cases.  For instance, if a CSV file has 50 columns some of which are obviously numeric and some of which are obviously string-valued, it is slightly annoying to have to construct the proper formatting string before loading the file.   
+
+In contrast, there is the  "default inference" paradigm, in which more parameters can be set by default choices instead of explicit specification, and attempts are made to infer the proper defaults in a dynamic way from the input data.   For instance, the "default inference" approach to CSV-reading might include some inspection for potential header data (especially if the first few lines begin with a '#' character), and have some form of type inference.  This approach is attractive because it reduces the mental overhead necessary for the most common cases, and can make integration into every-day work much easier.
+
+However, good default inference interfaces are hard to design.      The actual default preferences that users have in various real-world situations are often quite complex and difficult to describe programmatically, so algorithms for inferring them often end up having to handle a long list of subtlely-different cases on a one-by-one basis.  The more complex such inferences get, the harder they are to understand and predict, especially in the "edge cases".   Moreover, since no inference algorithm will be able to handle all situations perfectly, the interface must be designed to allow easy default overrides, as well as meaningful notifications that alert the user to inferences as they are made, so that she can easily determine where to do an override if required.  An interface with many poor opaque default settings and no easy way to override them is much inferior to a simple explicit inferface.  
+
+Default inference interfaces are also hard to document.  Unlike explicit interfaces where parameter list descriptions are helpful for understanding the API and  corresponding keyword argument defaults can be parsed by automatic-documentation tools, a "default inference" interface will contain nontrivial logic on the values of default arguments in the body of the code, the behavior of which is impossible for automatic-documentation tools to capture.   Default inference interfaces are better thought of in terms of "use-case" scenarios, which have to be explained in hand-crafted tutorial-style documentation.
+
+The NumPy project works on the "explicit" paradigm by conscious design.  This is fitting and proper, because NumPy is meant not only as an end-user tool but also a framework to build other tools. (And usually its interfaces aren't *that* cumbersome.) 
+
+We have, however, consciously chosen to design the **tabular** project with more of an inference-based interface.  Indeed, the potential for ease-of-use that it affords is one of the motivating features behind our project.   This can be seen throughout our code base (e.g. the handling of type and delimiter inference in reading CSVs).  We have tried to do it well: hard work and much testing has been devoted to making a wide variety of common cases very easy and intuitive, and we attempt to expose our logic as cleanly as possible.   We also ensure that the NumPy interface is retained through keyword arguments with identical names, making it very easy to use override defaults just by coding in NumPy's usual "explicit" style.
+
+But of course there are holes.  Comments and suggestions are greatly welcome. 
+
+
+	

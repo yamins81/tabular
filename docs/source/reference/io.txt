@@ -1,0 +1,508 @@
+.. _io:
+
+Input and Output
+==================
+
+The **tabular** package supports reading and writing to three file formats:  delimited text files, numpy binary files, and the Hierarchical Separated Variable (HSV) format.
+
+Delimited text files are a very common format for storing tabular data.  In this format, each record of a tabular dataset is saved as a separate line, and values in each field are separated within lines by some chosen delimiter character(s).   The ubiquitous Comma-Separated Value files (CSVs) are delimited text in which the delimiter is the comma character, ','.    Delimited text files are easy to use, and are essentially human-readable/-writeable,  but may not be especially efficient in terms of memory.  
+
+Binary files are more efficient than text files.   However, because the efficiency of binary representations is achieved by using special encodings to compress the data, they are tricky to read and write and are highly  dependent on the details of the data structure being represented.  NumPy has its own binary format for storing record arrays. 
+
+The HSV file format represents a tabular data file as directory containing a separate file for each column of data.  Hierarchical groupings of columns, like those described by a tabarray's `coloring` attribute, are represented by nested directories.   The HSV format is useful if it is important to be able to load or create specific columns separately, without having to load/recreate the entire data set.   
+
+Files in each of these formats can be read into a tabarray by using the appropriate keyword to specify the file's path to the tabarray constructor: 'SVfile' for delimited text files, 'HSVfile' for HSV files, and 'binary' for NumPy binary files.   Tabarrays also come with methods to write out files to each of the formats -- 'saveSV', 'savebinary', and 'saveHSV'.    Details on the use of all these are given below.
+
+
+
+.. _text-file-io:
+
+Delimited Text Files
+------------------------------------------------------
+
+To load a delimited text file into a tabarray, give the tabarray constructor the file's path as the `SVfile` keyword argument: 
+
+	>>> X = tb.tabarray(SVfile = 'INPUT_FILE_PATH')
+	
+("SVfile" is short for "separated variable file", a synonym for "delimited text" by analogy with "comma separated variable" file.)    This constructor is wrapping the :func:`tabular.io.loadSV` function, which can be used with NumPy record arrays.
+
+To save a tabarray to a delimited text file, use the 'saveSV' method with the output file path as the argument:
+
+	>>> X.saveSV('OUTPUT_FILE_PATH')
+	
+This method is a wrapper for the :func:`tabular.io.saveSV` function, which can also be used with NumPy record arrays.
+
+Since tabular data files come in many flavors -- with different delimiters, line terminators, escaping conventions, header notation formats, &c --   **tabarray** provides a variety of additional parameters that can be used to control the loading and writing of delimited text files.     The tabarray constructor also has routines for inferring the formatting parameters from the file, so for many typical delimited text files, setting these parameters may be unnecessary.    
+
+Tabular's loadSV and saveSV functions are somewhat analogous to NumPy's loadtxt and savetxt function, but do not share any code with them.   The two main differences are that (i) the tabarray methods have inference routines to allow users to avoid having to set formatting parameters (though inference can overridden by setting parameters if desired), while the NumPy functions require the user to always be explicit about formatting, and (ii) the tabarray methods use Python's built-in highly-optimized CSV reader/writer to do the actual reading/reading, while the NumPy functions do not.     
+
+
+Basic Examples
+^^^^^^^^^^^^^^^^^^
+
+Example 1.1  Copy the five tab-delimited lines below into a text file, ``example.txt``:: 
+
+	name	ID	color	size	June	July
+	bork	1212	blue	big	45.32	46.07
+	mork	4660	green	small	32.18	32.75
+	stork	2219	red	huge	60.93	61.82
+	lork	4488	purple	tiny	0.44	0.38
+
+Import tabular:
+
+>>> import tabular as tb
+
+To load this data ``example.tsv`` into a tabarray:
+
+>>> x = tb.tabarray(SVfile='example.txt')
+Inferring delimiter to be '\t'
+Inferring names from the last header line (line 1 ).
+>>> x
+tabarray([('bork', 1212, 'blue', 'big', 45.32, 46.07),
+       ('mork', 4660, 'green', 'small', 32.18, 32.75),
+       ('stork', 2219, 'red', 'huge', 60.93, 61.82),
+       ('lork', 4488, 'purple', 'tiny', 0.44, 0.38)], 
+      dtype=[('name', '|S5'), ('ID', '<i4'), ('color', '|S6'), ('size', '|S5'), ('June', '<f8'), ('July', '<f8')])
+
+Notice that **the data type of each column and the file delimiter are inferred**, and the first line of the file is treated as a list of column names. 
+
+Example 1.2   To save this file to a comma-separated value file, do:
+
+>>> x.saveSV('example_copy.csv',delimiter=',')
+Using delimiter  ','
+
+Now read this file in, and compare to the original:
+
+>>> y = tb.tabarray(SVfile = 'example_copy.csv')
+Inferring delimiter to be ','
+Inferring names from the last header line (line 1 ).
+>>> (x == y).all()
+True
+
+
+Formatting Parameters
+^^^^^^^^^^^^^^^^^^^^^^^
+
+:func:`tabular.io.loadSV`  and :func:`tabular.io.saveSV` use the  `python csv module <http://docs.python.org/library/csv.html>`_ to do the actual reading/writing of csvs.   This module accepts a number of formatting paramters, and the interface to these parameters is duplicated in tabarray. 
+
+**delimiter:** The most important formatting parameter is the "delimiter" parameter, which can be used both in loading and saving tabarrays.  
+
+Example 2.1   Copy the following to a file ``example2.txt``::
+
+	name|ID|color|size|June|July
+	bork|1212|blue|big|45.32|46.07
+	mork|4660|green|small|32.18|32.75
+	stork|2219|red|huge|60.93|61.82
+	lork|4488|purple|tiny|0.44|0.38
+
+To ensure that the '|' is used in loading ``example2.txt``, do:
+
+>>> x = tb.tabarray(SVfile = 'example2.txt',delimiter = '|')
+Setting dialect attribute delimiter to equal specified valued: |
+Inferring names from the last header line (line 1 ).
+>>> x
+tabarray([('bork', 1212, 'blue', 'big', 45.32, 46.07),
+       ('mork', 4660, 'green', 'small', 32.18, 32.75),
+       ('stork', 2219, 'red', 'huge', 60.93, 61.82),
+       ('lork', 4488, 'purple', 'tiny', 0.44, 0.38)], 
+      dtype=[('name', '|S5'), ('ID', '<i4'), ('color', '|S6'), ('size', '|S5'), ('June', '<f8'), ('July', '<f8')])
+
+
+
+Example 2.2   To use, say, the '&' character as the delimiter when save out, do:
+
+>>> x.saveSV('example2_copy.txt',delimiter='&')
+Using delimiter  '&'
+
+NOTE: the delimiter MUST be a one-character string.
+
+**lineterminator:** The "lineterminator" parameter controls the character used to denote line breaks.   The default setting is "\n".   NOTE:  when reading in a file, the loadSV function uses the "universal" option to the python open function (read about the 'rU' option to `open <http://docs.python.org/library/functions.html#open>`_).   Therefore, even if a file has the '\r\n' line break used on Windows platforms, the default "\n" line terminator still works.   
+
+**quotechar:**   When the chosen delimiter appears in an entry of a tabular data file, the Python CSV writer appends a quote character at the beginning and end of the entry to avoid ambiguities.   Similarly, the Python CSV module strips these quotes  when reading back in.
+
+Example 2.3   For instance, copy this data to the file ``example3.txt``::
+
+	name,ID,color,size,June,July
+	"bork,stork",1212,blue,big,45.32,46.07
+	mork,4660,green,"small,tiny",32.18,32.75
+	stork,2219,red,"huge,enormous",60.93,61.82
+	lork,4488,purple,"small,tiny",0.44,0.38
+	
+This file is read in correctly, and the quotes are stripped:
+
+>>> x = tb.tabarray(SVfile = 'example3.txt')
+Inferring delimiter to be ','
+Inferring names from the last header line (line 1 ).
+>>> x['size']
+tabarray(['big', 'small,tiny', 'huge,enormous', 'small,tiny'], 
+      dtype='|S13')
+
+
+Example 2.4    When writing out a tabarray that needs quoting, the saveSV function produces a warning, since quoting slows down the writing operation.   
+
+>>> x.saveSV('example3_copy.txt',delimiter=',')
+Using delimiter  ','
+WARNING: An entry in the 'name' column contains at least one instance of the delimiter ',' and therefore will use the Python csv module quoting convention (see online documentation for Python's csv module).  You may want to choose another delimiter not appearing in records, for performance reasons.
+
+The default value of `quotechar` is the doublequote character, but can be set using the `quotechar` parameter.  
+
+**doublequote, escapechar,** and **quoting:** Of course, if a file needs quoting, AND the quotechar itself appears in a an entry of the file, there is again an ambiguity.   This ambiguity is handled by the `doublequote` parameter, which when set True doubles all instances of the quotechar that are actually in the data, and the `escapechar` parameter, which can be used in liue of doublequoting to escape real instances of the quotechar.    The `quoting` parameter  sets an overall quoting policy, e.g. whether `all` entries should be quoted, or only the minimal number neccessary to prevent ambiguity &c.   You can read more about these parameters on the `python csv module site <http://docs.python.org/library/csv.html>`_. 
+
+**skipinitialspace:**  Sometimes, delimited data comes with white space after the delimiter, and this white space should not be included in the data itself.   To strip initial whitespace, set the `skipinitialspace` parameter to True (the default is False).
+
+**dialect:** loadSV also accepts a `dialect` keyword argument, which allows you to give a `csv.dialect` object as used in the Python csv module.  
+
+
+Delimiter, Datatype and Header Inference
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The loadSV function has several inference routines to guess the format of your data.   
+
+**Delimiter Inference:** Unless the delimiter is explicitly specified (either directly, through the `dialect` parameter, or from file metadata),  loadSV infers the delimiter based on the file contents.   It does this first by trying an improved version of Python's  `csv sniffer <http://docs.python.org/library/csv.html#csv.Sniffer>`_ algorithm; if that fails to determine a delimiter, the delimiter is set based on the file extension ('csv' defaults to comma delimiter, and everything else to tab delimiter).   
+
+**Datatype Inference:** By default, the loadSV function uses the datatype inference function :func:`tabular.io.typeinfer`, just as is used when constructing a tabarray from python lists of columns or records.   Just as you can in that situation, you can override the inference of data types by specifying a NumPy-style "formats" argument or  "dtype" argument explicitly.   
+
+**Header Inference:**  Many delimited text files contain metadata about the file in one or more header lines at the top of the file, before the actual data lines begin.   The loadSV function has several mechanisms for specifying and inferring the header lines of a file. 
+
+By default, loadSV will assume that the first line of a file contains the column names.  This behavior is controlled bythe `namesinheader` parameter, which can be either True or False (it is True by defulat). 
+
+Example 3.1    For example, save this data to the file 'nonames.txt'::
+
+	bork	1212	blue	big	45.32	46.07
+	mork	4660	green	small	32.18	32.75
+	stork	2219	red	huge	60.93	61.82
+	lork	4488	purple	tiny	0.44	0.38
+
+Load with:
+
+>>> x = tb.tabarray(SVfile = 'nonames.txt', namesinheader=False)
+Inferring delimiter to be '\t'
+>>> x
+tabarray([('bork', 1212, 'blue', 'big', 45.32, 46.07),
+       ('mork', 4660, 'green', 'small', 32.18, 32.75),
+       ('stork', 2219, 'red', 'huge', 60.93, 61.82),
+       ('lork', 4488, 'purple', 'tiny', 0.44, 0.38)], 
+      dtype=[('f0', '|S5'), ('f1', '<i4'), ('f2', '|S6'), ('f3', '|S5'), ('f4', '<f8'), ('f5', '<f8')])
+
+Notice that the columns of the tabarray are automatically given names (consistent with the numpy convention).
+
+Multiple header lines can be denoted with a `comments` character.  By default, a hash mark (``#``) at the begining of the file is automatically recognized as a comments character, indicating the header of the file, and is automatically parsed out.  
+
+Example 3.2   Save this data to the file ``hash.txt``::
+
+	#name	ID	color	size	June	July
+	bork	1212	blue	big	45.32	46.07
+	mork	4660	green	small	32.18	32.75
+	stork	2219	red	huge	60.93	61.82
+	lork	4488	purple	tiny	0.44	0.38
+
+Load with:
+
+>>> x = tb.tabarray(SVfile = 'hash.txt')
+Inferring delimiter to be '\t'
+Inferring names from the last header line (line 1 ).
+>>> x.dtype.names
+('name', 'ID', 'color', 'size', 'June', 'July')
+
+You can specify an arbitrary comments character by setting `comments`.  
+
+Example 3.3   Save this data ``comments.txt``::
+
+	@name	ID	color	size	June	July
+	bork	1212	blue	big	45.32	46.07
+	mork	4660	green	small	32.18	32.75
+	stork	2219	red	huge	60.93	61.82
+	lork	4488	purple	tiny	0.44	0.38
+
+Load with:
+
+>>> y = tb.tabarray(SVfile='comments.txt', comment='@')
+Inferring delimiter to be '\t'
+Inferring names from the last header line (line 1 ).
+>>> (x == y).all()
+True
+
+When multiple lines beginning the with comments character are present, all header lines are removed and the column names are assumed to be in the last line of the header. 
+
+Example 3.4    Save this file to ``verbose.txt``::
+
+	@this is my file
+	@these are my verbose notes
+	@blah blah blah
+	@name	ID	color	size	June	July
+	bork	1212	blue	big	45.32	46.07
+	mork	4660	green	small	32.18	32.75
+	stork	2219	red	huge	60.93	61.82
+	lork	4488	purple	tiny	0.44	0.38
+
+Load with:
+
+>>> x = tb.tabarray(SVfile='verbose.txt', comments = '@')
+Inferring delimiter to be '\t'
+Inferring names from the last header line (line 4 ).
+>>> x
+tabarray([('bork', 1212, 'blue', 'big', 45.32, 46.07),
+       ('mork', 4660, 'green', 'small', 32.18, 32.75),
+       ('stork', 2219, 'red', 'huge', 60.93, 61.82),
+       ('lork', 4488, 'purple', 'tiny', 0.44, 0.38)], 
+      dtype=[('name', '|S5'), ('ID', '<i4'), ('color', '|S6'), ('size', '|S5'), ('June', '<f8'), ('July', '<f8')])
+
+If there is no comments character but there are multiple header lines, you can specify the number of header lines. 
+
+Example 3.5    Copy these lines to a text file called 'nohash.tsv'::
+
+	this is my file
+	name	ID	color	size	June	July
+	bork	1212	blue	big	45.32	46.07
+	mork	4660	green	small	32.18	32.75
+	stork	2219	red	huge	60.93	61.82
+	lork	4488	purple	tiny	0.44	0.38
+	
+Load with:
+	
+>>> x = tb.tabarray(SVfile = 'nohash.txt', headerlines=2)
+Inferring delimiter to be '\t'
+Inferring names from the last header line (line 2 ).
+
+
+
+Structured Metadata
+^^^^^^^^^^^^^^^^^^^^^^^
+
+With a little special formatting, you can explicitly indicate lines in the header that provide names, types, and coloring metadata.  You can use the :func::func:`tabular.tab.tabarray.saveSV` method to generate this format.  This relies on a special line in the header that begins with 'metametadata=' followed by a string representation of a dictionary mapping metadata keys to line numbers within the header starting at 0).   
+
+At the moment, there are five recognized metadata keys that:
+
+* 'names':  the column names
+* 'types':  the python names of the datatypes of the columns
+* 'formats': the numpy names of the datatypes of columns
+* 'dialect': a list of csv-module `dialect` formatting parameters  
+* 'coloring': the coloring attribute 
+
+
+Example 4.1  Explicitly designate that line 1 has column names.  Save this file to "meta_names.txt'::
+
+	metametadata={'names': 1}
+	name	ID	color	size	June	July
+	bork	1212	blue	big	45.32	46.07
+	mork	4660	green	small	32.18	32.75
+	stork	2219	red	huge	60.93	61.82
+	lork	4488	purple	tiny	0.44	0.38
+
+Load with::
+
+	>>> x = tb.tabarray(SVfile='meta_names.txt')
+	>>> x.dtype.names
+	(name,ID,color,size,June,July)
+
+Example 4.2  Explicitly designate that line 3 contains the column names.    Save these lines to 'meta_nohash.txt'::
+
+	metametadata={'names': 3}
+	these are my verbose notes
+	blah blah blah
+	name	ID	color	size	June	July
+	bork	1212	blue	big	45.32	46.07
+	mork	4660	green	small	32.18	32.75
+	stork	2219	red	huge	60.93	61.82
+	lork	4488	purple	tiny	0.44	0.38
+
+Load with::
+
+	>>> tb.tabarray(SVfile='meta_nohash.txt')
+
+
+Example 4.3  The ``metametadata=`` line can be anywhere in the header if there is a comments character.  Save these lines to 'meta_random.txt'::
+
+	#this is my file
+	#metametadata={'names': 2}
+	#name	ID	color	size	June	July
+	#not sure why there are more notes here
+	bork	1212	blue	big	45.32	46.07
+	mork	4660	green	small	32.18	32.75
+	stork	2219	red	huge	60.93	61.82
+	lork	4488	purple	tiny	0.44	0.38
+
+Load with::
+
+	>>> tb.tabarray(SVfile='meta_random.txt')
+
+Example 4.4  Include various kinds of metadata.  Save these lines to 'meta_all.txt'::
+
+	metametadata={'names': 4, 'types': 3,'coloring':1,'dialect':2}
+	{'months':['June','July'],'features':['color','size']}
+	{'delimiter':'\t','skipinitialspace':False}
+	str	float	str	str	float	float
+	name	ID	color	size	June	July
+	bork	1212	blue	big	45.32	46.07
+	mork	4660	green	small	32.18	32.75
+	stork	2219	red	huge	60.93	61.82
+	lork	4488	purple	tiny	0.44	0.38
+
+Load with::
+
+	>>> tb.tabarray(SVfile='meta_all.txt')
+	
+Notice that the 'ID' column is loaded as a float as opposed to the inferred datatype which would be int.
+
+
+Example 4.5  You don't have to have a ``metametadata=`` line in your file to take advantage of special metadata in the file; instead you can supply the `metametadata` directly.  Save these lines to file 'meta_types1.txt"::
+
+	str	int	str	str	float	float
+	name	ID	color	size	June	July
+	bork	1212	blue	big	45.32	46.07
+	mork	4660	green	small	32.18	32.75
+	stork	2219	red	huge	60.93	61.82
+	lork	4488	purple	tiny	0.44	0.38
+
+Load with::
+
+	>>> tb.tabarray(SVfile='meta_types1.txt', metametadata={'names': 1, 'types': 0})
+	
+
+When using  saveSV, you can use the "metadata" keyword to control how special-format metadata is written out.    
+
+Example 4.6   Let's go back to the first example from above, form the file "example.txt":
+
+>>> x = tb.tabarray(SVfile = 'example.txt')
+Inferring delimiter to be '\t'
+Inferring names from the last header line (line 1 ).
+>>> x
+tabarray([('bork', 1212, 'blue', 'big', 45.32, 46.07),
+	('mork', 4660, 'green', 'small', 32.18, 32.75),
+	('stork', 2219, 'red', 'huge', 60.93, 61.82),
+	('lork', 4488, 'purple', 'tiny', 0.44, 0.38)],
+	dtype=[('name', '|S5'), ('ID', '<i4'), ('color', '|S6'), ('size', '|S5'), ('June', '<f8'), ('July', '<f8')])
+
+
+Suppose you wanted to use the `coloring` attribute to group the ``color`` and ``size`` columns under the coloring name ``info``, and the ``June`` and ``July`` columns under ``price``.  
+
+.. image:: images/example.png
+
+Represent the hierarchical structure on the columns, or coloring, by setting the `coloring` attribute to the appropriate dictionary:
+
+>>> x.coloring = {'info': ['color', 'size'], 'price': ['June', 'July']}
+
+Now save the tabarray to a tab-separated text file, setting the `metadata` argument to `True`.
+
+>>> x.saveSV('example_color.txt', metadata=True)
+
+The resulting file now has coloring and data type information stored in the header.  Here it is viewed in MS Excel:
+
+.. image:: images/example_color_xls.png
+
+If you now load this file using the ``SVfile`` argument, the type information in the header will be used (instead of inferring the data type of each column), and the coloring information will be loaded properly.
+
+>>> y = tb.tabarray(SVfile='example_color.tsv')
+>>> y.coloring
+{'info': ['color', 'size'], 'price': ['June', 'July']}
+
+The value of the `metadata` argument can also be a list of metadata keys (e.g. ['names','formats']) if you want to restrict the metadata just to those keys.  Setting `metadata = False` or '[]' prints no metadata at all.  The `printmetadict` keyword argument is used to control the printing of the metametadata dictionary; when True, the dictionary is printed, when False it is not.  As we saw above in many situations, the default is to have metadata = ['names'], and printmetadict = False.   
+
+
+Loading Specific Columns 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The `usecols` parameter allows you to load only desired columns, specified by name or by number.  This is faster than loading all columns because unnecessary columns are not typed or manipulated. 
+
+Returning to the original ``example.txt`` file, load the first and last columns only:
+
+>>> x = tb.tabarray(SVfile = 'example.txt', usecols=[0,-1])
+Inferring delimiter to be '\t'
+Inferring names from the last header line (line 1 ).
+>>> x
+tabarray([('bork', 46.07), ('mork', 32.75), ('stork', 61.82), ('lork', 0.38)], 
+      dtype=[('name', '|S5'), ('July', '<f8')])
+>>> x = tb.tabarray(SVfile='example.txt', usecols=['color', 'size'])
+Inferring delimiter to be '\t'
+Inferring names from the last header line (line 1 ).
+>>> x
+tabarray([('blue', 'big'), ('green', 'small'), ('red', 'huge'),
+	   ('purple', 'tiny')], 
+	  dtype=[('color', '|S6'), ('size', '|S5')])
+
+You can mix names and column numbers.   If the tabarray has a coloring, color names can also be passed, and all columns in that color group will be included. 
+
+
+
+Line and Value "Fixing"
+^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+.. _binary-io:
+
+NumPy binary files
+----------------------------------------------
+
+You can load and save a tabarray from/to a NumPy binary file (``.npy``) or archive (``.npz``).  
+
+Saving the data to a ``.npy`` binary file uses the ``numpy.save`` function and only saves the data and column names.
+
+>>> x = tb.tabarray(SVfile='example.tsv')
+>>> x.savebinary('example.npy')
+
+You can load the data from the ``.npy`` binary file back into a tabarray using the `binary` argument of the tabarray constructor, which uses the ``numpy.load`` function.
+
+>>> tb.tabarray(binary='example.npy')
+tabarray([('bork', 1212, 'blue', 'big', 45.32, 46.07),
+       ('mork', 4660, 'green', 'small', 32.18, 32.75),
+       ('stork', 2219, 'red', 'huge', 60.93, 61.82),
+       ('lork', 4488, 'purple', 'tiny', 0.44, 0.38)], 
+      dtype=[('name', '|S5'), ('ID', '<i4'), ('color', '|S6'), ('size', '|S5'), ('June', '<f8'), ('July', '<f8')])
+
+If you want to also save `coloring` information, use a NumPy binary archive (``.npz``), which is a zipped archive created using ``numpy.savez`` and containing a ``.npy`` file corresponding to the data itself, plus (optionally) separate ``.npy`` files for the `coloring` information.  Use the `savecoloring` argument to specify whether or not to save these attributes, the default is `True`.
+
+For example, 
+
+>>> x.coloring = {'info': ['color', 'size'], 'price': ['June', 'July']}
+>>> x.savebinary('example.npz')
+
+saves a NumPy binary archive containing two ``.npy`` files:  ``data.npy`` and ``coloring.npy``. 
+
+Load the ``.npz`` archive using the `binary` argument of the tabarray constructor, which will look for and attach `coloring` information.
+
+>>> y = tb.tabarray(binary='example.npz')
+>>> y.coloring
+{'info': ['color', 'size'], 'price': ['June', 'July']}
+
+
+
+.. _hsv-io:
+
+Hierarchical separated variable files
+---------------------------------------------------------------------
+
+The Tabular package introduces a new file format to represent column-oriented hierarchical structure (e.g. as represented by the tabarray `coloring` attribute).  In this format, the data is stored in regular text files inside of directories whose file structure explicitly represents hierarchical structure on the columns. 
+
+A hierarchical separated variable (HSV) file is a directory containing a separate text file for each column of tabular data.  Groups of columns (e.g. columns in the same color group) are stored in subdirectories which are themselves HSV files. 
+
+Load the example data from above and save it as a HSV file.
+
+>>> x = tb.tabarray(SVfile='example.tsv')
+>>> x.saveHSV('example_nocolor.hsv')
+
+This produces a directory called 'example_nocolor.hsv' with 7 text files:  one for each column of data, plus a header file that orders the columns, ``header.txt``.  Notice that the data type of each column of data is stored in the name of the corresponding text file.
+
+.. image:: images/example_nocolor_hsv.png
+
+You can load back the data using the `HSVfile` argument of the tabarray constructor.
+
+>>> tb.tabarray(HSVfile='example_nocolor.hsv')
+
+As above, suppose you wanted to use the `coloring` attribute to group the ``color`` and ``size`` columns under the coloring name ``info``, and the ``June`` and ``July`` columns under ``price``.  
+
+>>> x.coloring = {'info': ['color', 'size'], 'price': ['June', 'July']}
+
+Save the example data, now with the `coloring` attribute giving hierarchical structure on the columns, to a HSV file. 
+
+>>> x.saveHSV('example_color.hsv')
+
+This produces a directory called 'example_nocolor.hsv'.  Each column of data is still stored in a separate text file, but now columns corresponding to the same `coloring` key are grouped together in HSV subdirectories named by their `coloring`, and each HSV directory contains a ``header.txt`` file. 
+
+.. image:: images/example_color_hsv.png
+
+Now when you load this structured HSV file, the `coloring` is inferred from the file directory structure.
+
+>>> tb.tabarray(HSVfile='example_color.hsv')
+
+Note that the HSV file format is of course not required for storing a tabarray's hierarchical structure, and the load and save methods can be used to read and write regular separated variable text files with hierarchical structure on the columns, as shown above. 

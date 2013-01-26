@@ -1,0 +1,118 @@
+.. _construction:
+
+Creating Tabular Arrays
+=======================
+
+The tabarray has a unified constructor that lets you load data from a variety of different sources.  
+
+To make a tabarray, you can pass the constructor an existing Python data object (e.g. a list of records or columns), or a file path to tabular data stored on disk in some format (e.g. CSV file, NumPy binary file), using different keyword arguments to control how the constructor interprets the data you give it.    By default, the data types of the columns will be inferred automatically, and default column names will be selected, but you can override these defaults to set names and types by hand using the "names", "dtype", and "format" arguments.    The constructor has a variety of other keyword arguments for controlling the resulting data object (see  :func:`tabular.tabarray.tabarray.__new__` for more detailed information.)
+
+
+To see how the tabarray contructor works, start by importing Tabular in an interactive Python session:
+
+>>> import tabular as tb
+
+From data in memory
+-------------------------------------------
+
+You can construct a tabarray from data in a Python object (e.g. a list of records).
+
+Records
+^^^^^^^^^^^^^^^^^
+
+Pass a list of records (rows) to the `records` argument.  It is fastest when passed a list of tuples, rather than a list of lists (but this only really matters for large tabarrays).
+
+>>> tb.tabarray(records=[('bork', 1, 3.5), ('stork', 2, -4.0)], names=['a','b','c'])
+tabarray([('bork', 1, 3.5), ('stork', 2, -4.0)], 
+      dtype=[('a', '|S5'), ('b', '<i4'), ('c', '<f8')])
+      
+If you do not give the "names" argument, column names 'f0', 'f1', &c, will be chosen by default: 
+
+>>> tb.tabarray(records=[('mork', 1, 2.5)]*100000)
+tabarray([('mork', 1, 2.5), ('mork', 1, 2.5), ('mork', 1, 2.5), ...,
+       ('mork', 1, 2.5), ('mork', 1, 2.5), ('mork', 1, 2.5)], 
+      dtype=[('f0', '|S4'), ('f1', '<i4'), ('f2', '<f8')])
+
+Columns
+^^^^^^^^^^^^^
+
+Pass a list of columns to the `columns` argument.  It is fastest when passed a list of NumPy arrays, rather than a list of lists (but this only really matters for large tabarrays). 
+
+>>> tb.tabarray(columns=[['bork', 'stork'], [1, 2], [3.5, -4.0]], names=['a','b','c'])
+tabarray([('bork', 1, 3.5), ('stork', 2, -4.0)], 
+      dtype=[('a', '|S5'), ('b', '<i4'), ('c', '<f8')])
+
+>>> import numpy as np
+>>> x = np.array(['mork']*10**5);  y = np.ones(10**5, int);  z = np.ones(10**5)*2.5
+>>> tb.tabarray(columns=[x,y,z])
+tabarray([('mork', 1, 2.5), ('mork', 1, 2.5), ('mork', 1, 2.5), ...,
+       ('mork', 1, 2.5), ('mork', 1, 2.5), ('mork', 1, 2.5)], 
+      dtype=[('f0', '|S4'), ('f1', '<i4'), ('f2', '<f8')])
+
+Arrays
+^^^^^^^^^^^
+
+Pass a NumPy array to the `array` argument.  The NumPy array can have uniform or structured dtype.
+
+**NumPy array (uniform type)**
+
+>>> import numpy as np
+>>> tb.tabarray(array=np.array([np.linspace(0,i,5) for i in range(4)]))
+tabarray([(0.0, 0.0, 0.0, 0.0, 0.0), (0.0, 0.25, 0.5, 0.75, 1.0),
+       (0.0, 0.5, 1.0, 1.5, 2.0), (0.0, 0.75, 1.5, 2.25, 3.0)], 
+      dtype=[('f0', '<f8'), ('f1', '<f8'), ('f2', '<f8'), ('f3', '<f8'), ('f4', '<f8')])
+
+**NumPy array (structured dtype)**
+
+Pass a NumPy ndarray or recarray with structured dtype (e.g. named columns, each a specific Python data type) to the `array` argument.  When doing this, also pass the dtype of that object to the `dtype` argument.  
+
+>>> x = np.rec.fromrecords([('bork', 1, 3.5), ('stork', 2, -4.0)], names=['a','b','c'])
+>>> tb.tabarray(array=x, dtype=x.dtype)
+tabarray([('bork', 1, 3.5), ('stork', 2, -4.0)], 
+      dtype=[('a', '|S5'), ('b', '<i4'), ('c', '<f8')])
+     
+NumPy arrays can themselves be constructed in many ways -- see `NumPy array creation routines <http://docs.scipy.org/doc/numpy/reference/routines.array-creation.html#routines-array-creation>`_.  
+
+Empty arrays
+^^^^^^^^^^^^^^^
+
+Empty tabular arrays can be constructed using the "shape" parameter:
+
+>>> tb.tabarray(shape=(10,),names=['a','b','c','d'],formats='f8,|S4,i4,i4')
+tabarray([(-2.0000071525573744, '\x18', 0, 0), (0.0, '', 0, 0),
+       (0.0, '', 0, 0), (6.590560383656763e-304, '\xe0\xee\xa4\x01', 0, 0),
+       (0.0, '', 0, 1941674056),
+       (7.3861605135730513e-304, '\t\t\x08*', 14157280, 27576368),
+       (0.0, '', -897189557, 16575680),
+       (-5.5559695710920376e-46, '`\xe3\xfc', 27576368, 0),
+       (0.0, '', 0, 0), (0.0, '', -1778927632, 16592112)], 
+      dtype=[('a', '<f8'), ('b', '|S4'), ('c', '<i4'), ('d', '<i4')])
+      
+The empty array does `not` contain zeros or blanks -- it contains randomly selected values. 
+
+
+The `dtype` object
+---------------------------------------
+
+As is implied by the examples above, tabarrays have an associated `dtype` object, containing information about the names and formats of the columns in the tabular array.     For instance, the `dtype` of a tabarray with column 'A' (length-5 string), column 'B' (integer-valued), and column 'C' (floating point) is::
+
+	dtype([('A', '|S5'), ('B', '<i4'), ('C', '<f8')])
+
+The `dtype` object can be queried to find relevant information about the tabarray: the length of the dtype is the number of columns of the array, while ``dtype.names`` is the is of column names.   Tabarray dtypes are inherited directly from NumPy recarray dtypes.  
+
+Have a look at `Numpy dtypes <http://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.html>`_ for more information about dtype objects.
+
+When loading from a list of records or columns, the `dtype` is inferred by default.   You can override the inference of data types by specifying a "formats" argument or a "dtype" argument directly:
+
+>>> tb.tabarray(records=[('bork', 1, 3.5), ('stork', 2, -4.0)], formats='|S5,f8,f8')
+tabarray([('bork', 1, 3.5), ('stork', 2, -4.0)], 
+      dtype=[('a', '|S5'), ('b', '<i4'), ('c', '<f8')])
+>>> tb.tabarray(records=[('bork', 1, 3.5), ('stork', 2, -4.0)], dtype=[('a','|S5'),('b','f8'),('c','f8')])
+tabarray([('bork', 1, 3.5), ('stork', 2, -4.0)], 
+      dtype=[('a', '|S5'), ('b', '<i4'), ('c', '<f8')])
+
+
+From data on disk
+----------------------------------------
+
+You can also construct a tabarray by loading data from a variety of file formats (e.g. delimited text file, NumPy binary file).  Have a look at :ref:`io` for more information.

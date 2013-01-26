@@ -1,0 +1,21 @@
+body, td{
+font-size : 10pt;
+}
+td.name,th.name{
+background-color : #ffffff
+}
+td.color,th.color{
+background-color : #ffffff
+}
+td.June,th.June{
+background-color : #ffffff
+}
+td.July,th.July{
+background-color : #ffffff
+}
+td.ID,th.ID{
+background-color : #ffffff
+}
+td.size,th.size{
+background-color : #ffffff
+}

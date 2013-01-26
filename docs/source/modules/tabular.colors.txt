@@ -1,0 +1,7 @@
+.. highlight:: rest
+
+:mod:`tabular.colors`
+======================
+
+.. automodule:: tabular.colors
+	:members:

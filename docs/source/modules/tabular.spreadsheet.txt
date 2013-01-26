@@ -1,0 +1,7 @@
+.. highlight:: rest
+
+:mod:`tabular.spreadsheet`
+==============================
+
+.. automodule:: tabular.spreadsheet
+	:members:

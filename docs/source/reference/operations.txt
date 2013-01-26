@@ -1,0 +1,906 @@
+.. _operations:
+
+Manipulating Tabular Arrays
+================================
+
+There are lots of things you might want to do with data in a tabarray, including indexing, filtering, reassignment, sort, mathematical operations, record and column addition/deletion/renaming, concatenation, and various spreadsheet manipulations.    To follow the examples below, start by importing Tabular and constructing a tabarray.
+
+>>> import tabular as tb
+>>> Recs = [('North', 'Service', 44.497368897699261, 85937),
+ ('North', 'Manufacturing', 88.752549661587452, 305),
+ ('North', 'Education', 46.304921839816174, 90568),
+ ('North', 'Healthcare', 12.428147250824761, 52493),
+ ('South', 'Service', 7.3632321953949864, 85280),
+ ('South', 'Manufacturing', 2.35086845930782, 95578),
+ ('South', 'Education', 53.272407154429423, 11823),
+ ('South', 'Healthcare', 56.68070233253686, 32669),
+ ('East', 'Service', 5.9745703176360525, 81417),
+ ('East', 'Manufacturing', 93.840942619447858, 26229),
+ ('East', 'Education', 78.067752261015244, 62454),
+ ('East', 'Healthcare', 19.703894654017773, 63346),
+ ('West', 'Service', 32.015715993438917, 72732),
+ ('West', 'Manufacturing', 10.914876835171071, 23455),
+ ('West', 'Education', 41.714531295305711, 85876),
+ ('West', 'Healthcare', 81.458571751676629, 43660)]
+>>> X = tb.tabarray(records = Recs, names=['Region','Sector','Amount','Population'])
+
+.. _indexing-and-filtering:
+
+Indexing and Filtering 
+-----------------------------------------
+
+In general, indexing, filtering, and assignment work as they do for regular NumPy ndarrays (see `Numpy Indexing <http://docs.scipy.org/doc/numpy/user/basics.indexing.html>`_).     
+
+Individual columns or groups of columns can be selected:
+
+>>> X['Amount']							#select 'Amount' column
+array([ 44.4973689 ,  88.75254966,  46.30492184,  12.42814725,
+         7.3632322 ,   2.35086846,  53.27240715,  56.68070233,
+         5.97457032,  93.84094262,  78.06775226,  19.70389465,
+        32.01571599,  10.91487684,  41.7145313 ,  81.45857175])
+>>> X[['Amount','Population']]					#select both 'Amount' and 'Population' columns
+tabarray([(44.497368897699261, 85937), (88.752549661587452, 305), (46.304921839816174, 90568),
+       .  .  . 
+       (32.015715993438917, 72732), (10.914876835171071, 23455),
+       (41.714531295305711, 85876), (81.458571751676629, 43660)], 
+      dtype=[('Amount', '<f8'), ('Population', '<i4')])
+
+
+Individual rows or sets of rows can be selected:
+
+>>> X[0]							#select row 0
+ ('North', 'Service', 44.497368897699261, 85937)
+>>> X[4:9]							#select rows 4 through 8
+[('South', 'Service', 7.3632321953949864, 85280)
+ ('South', 'Manufacturing', 2.35086845930782, 95578)
+ ('South', 'Education', 53.272407154429423, 11823)
+ ('South', 'Healthcare', 56.68070233253686, 32669)
+ ('East', 'Service', 5.9745703176360525, 81417)]
+>>> X[[1,5,9,14]]						#select rows 1,5,9,and 14
+[('North', 'Manufacturing', 88.752549661587452, 305)
+ ('South', 'Manufacturing', 2.35086845930782, 95578)
+ ('East', 'Manufacturing', 93.840942619447858, 26229)
+ ('West', 'Education', 41.714531295305711, 85876)]
+ 
+Rich, row-by-row comparisons can be made for columns, returning boolean arrays.   
+
+>>> X['Sector'] == 'Manufacturing'				#compare to a scalar constant value
+array([False,  True, False, False, False,  True, False, False, False,
+        True, False, False, False,  True, False, False], dtype=bool)
+>>> X['Amount'] > .0001*X['Population']				#compare one column to another array of the same length
+array([ True,  True,  True,  True, False, False,  True,  True, False,
+        True,  True,  True,  True,  True,  True,  True], dtype=bool)
+        
+The resulting boolean arrays can be used to `select` rows:
+
+>>> print X[X['Sector'] == 'Manufacturing']			#get rows where "Sector" entry is "Manufacturing"
+[('North', 'Manufacturing', 88.752549661587452, 305)
+ ('South', 'Manufacturing', 2.35086845930782, 95578)
+ ('East', 'Manufacturing', 93.840942619447858, 26229)
+ ('West', 'Manufacturing', 10.914876835171071, 23455)]
+>>> print X[X['Amount'] > 50]					#get rows where "Amount" entry exceeds 50
+[('North', 'Manufacturing', 88.752549661587452, 305)
+ ('South', 'Education', 53.272407154429423, 11823)
+ ('South', 'Healthcare', 56.68070233253686, 32669)
+ ('East', 'Manufacturing', 93.840942619447858, 26229)
+ ('East', 'Education', 78.067752261015244, 62454)
+ ('West', 'Healthcare', 81.458571751676629, 43660)]
+
+Logical connectives 'AND' (&) and 'OR' (|) can be used to combine boolean arrays for more sophisticated filtering:
+
+>>> X[(X['Amount'] > 50) & (X['Sector'] == 'Manufacturing')]	#select rows where "Amount" > 50 and "Sector" = "Manufacturing"
+[('North', 'Manufacturing', 88.752549661587452, 305)
+ ('East', 'Manufacturing', 93.840942619447858, 26229)]
+>>> X[((X['Amount'] > 50) & (X['Sector'] == 'Manufacturing')) | (X['Population'] > 90000)]   
+[('North', 'Manufacturing', 88.752549661587452, 305)
+ ('North', 'Education', 46.304921839816174, 90568)
+ ('South', 'Manufacturing', 2.35086845930782, 95578)
+ ('East', 'Manufacturing', 93.840942619447858, 26229)]
+
+The contents of a tabarray can be changed by assignment, both for individual values:
+
+>>> print X['Amount'][0]
+44.497
+>>> X['Amount'][0] = 51.004
+>>> print X['Amount']
+51.004
+
+as well as whole columns:
+
+>>> X['Amount'] = X['Amount'] + 10
+>>> X['Amount']
+array([  61.004     ,   98.75254966,   56.30492184,   22.42814725,
+         17.3632322 ,   12.35086846,   63.27240715,   66.68070233,
+         15.97457032,  103.84094262,   88.06775226,   29.70389465,
+         42.01571599,   20.91487684,   51.7145313 ,   91.45857175])
+
+Row and column selection features can be combined:
+
+>>> X['Amount'][X['Sector'] == 'Manufacturing']			#get "Amount" entries for rows where "Sector" entry is "Manufacturing" 
+array([  98.75254966,   12.35086846,  103.84094262,   20.91487684])
+
+and also combined with assignments:
+
+>>> X['Amount'][X['Sector'] == 'Manufacturing'] = X['Amount'][X['Sector'] == 'Manufacturing'] - 10		#add 10 to all values selected above
+>>> X['Amount']
+array([ 61.004     ,  88.75254966,  56.30492184,  22.42814725,
+        17.3632322 ,   2.35086846,  63.27240715,  66.68070233,
+        15.97457032,  93.84094262,  88.06775226,  29.70389465,
+        42.01571599,  10.91487684,  51.7145313 ,  91.45857175])
+
+.. _sorting:
+
+Sorting
+---------------
+The `sort` method is also inherited from the NumPy sort method for ndarrays with structured dtype.  This is an in-place method, and so modifies the original tabarray!  Use the `copy` method first if you do not want this to happen.  See the documentation for the equivalent `numpy.sort <http://docs.scipy.org/doc/numpy/reference/generated/numpy.sort.html>`_ function.   The `order` argument determines the precedence order on which columns are sorted.
+
+>>> X.sort(order=['Region','Sector'])
+>>> X
+[('East', 'Education', 23.097478581186881, 78073)
+ ('East', 'Healthcare', 10.52554515403321, 6751)
+ ('East', 'Manufacturing', 87.72136064848614, 53744)
+ ('East', 'Service', 54.896677290366689, 32747)
+ ('North', 'Education', 57.60705040663634, 53327)
+ ('North', 'Healthcare', 41.550376687594138, 7896)
+ ('North', 'Manufacturing', 78.486819271428658, 39440)
+ ('North', 'Service', 11.568675158203657, 80672)
+ ('South', 'Education', 31.402298595542256, 39531)
+ ('South', 'Healthcare', 79.898317595005963, 70297)
+ ('South', 'Manufacturing', 84.012379396498261, 77165)
+ ('South', 'Service', 62.1631456237237, 70377)
+ ('West', 'Education', 68.727826108077394, 30589)
+ ('West', 'Healthcare', 81.726623074753874, 63049)
+ ('West', 'Manufacturing', 54.932402758880414, 84733)
+ ('West', 'Service', 55.281648099477955, 98990)]
+
+
+
+Matrix Math
+----------------------
+
+Sets of colums of a uniform data type can be "extracted" into NumPy arrays, on which NumPy mathematical operations can be performed.   There are a huge number of mathematical operations provided by NumPy (see `Numpy Functions <http://www.scipy.org/Numpy_Functions_by_Category>`_). 
+
+>>> X[['Amount','Population']].extract()
+array([[  6.10040000e+01,   8.59370000e+04],
+       [  8.87525497e+01,   3.05000000e+02],
+       [  5.63049218e+01,   9.05680000e+04],
+       [  2.24281473e+01,   5.24930000e+04],
+       [  1.73632322e+01,   8.52800000e+04],
+       [  2.35086846e+00,   9.55780000e+04],
+       [  6.32724072e+01,   1.18230000e+04],
+       [  6.66807023e+01,   3.26690000e+04],
+       [  1.59745703e+01,   8.14170000e+04],
+       [  9.38409426e+01,   2.62290000e+04],
+       [  8.80677523e+01,   6.24540000e+04],
+       [  2.97038947e+01,   6.33460000e+04],
+       [  4.20157160e+01,   7.27320000e+04],
+       [  1.09148768e+01,   2.34550000e+04],
+       [  5.17145313e+01,   8.58760000e+04],
+       [  9.14585718e+01,   4.36600000e+04]])      
+>>> import numpy
+>>> print numpy.sin(3*X[['Amount','Population']].extract().transpose() + 2)
+[[ 0.82159043  0.8309893   0.95518941 -0.18455713 -0.89482426  0.83460974
+  -0.9637142  -0.83771545  0.92554653  0.20619182  0.41856689 -0.00612231
+   0.74354961  0.84467109 -0.28863192 -0.97360648]
+ [ 0.42620037 -0.91364508  0.92530249 -0.77420816  0.51045049  0.68178561
+  -0.19463748  0.76642354 -0.12236557 -0.85562501 -0.62837127 -0.76810546
+   0.06296234 -0.01048714  0.82463985 -0.37838302]]
+
+.. _row-and-column-operations:
+
+Row and Column Operations
+--------------------------------------------------
+
+**Adding Records**
+
+Add a list of records to a tabarray using the `addrecords` method.  This method produces a new tabarray.
+
+>>> Y = X.addrecords(('West','Surfing',10,10000))		#create new array with additional row 
+>>> print Y[-2:]
+[('West', 'Healthcare', 91.458571751676629, 43660)
+ ('West', 'Surfing', 10.0, 10000)]
+
+
+**Adding Columns**
+
+To add a column to an existing tabarray, use the `addcols` method.  This method produces a new array:
+
+>>> import numpy
+>>> Importance = numpy.random.randint(10,size=(16,))
+>>> Y = X.addcols([Importance],names=['Importance'])		#create new array with new "Importance" column
+>>> Y.dtype.names
+('Region', 'Sector', 'Amount', 'Population', 'Importance')
+>>> Y['Importance']
+array([3, 9, 1, 3, 4, 8, 0, 9, 1, 7, 6, 6, 7, 4, 3, 6])
+
+**Deleting Columns**
+
+To delete a column or set of columns specified by column and/or coloring names, use the deletecols method.  Like `addcols`, this method produces a new array. 
+
+>>> Y = X.deletecols(['Population'])				#create new array with "Population" column deleted
+>>> Y
+tabarray([('North', 'Service', 44.497368897699261),
+       ('North', 'Manufacturing', 88.752549661587452),
+       ('North', 'Education', 46.304921839816174),
+       ('North', 'Healthcare', 12.428147250824761),
+       ('South', 'Service', 7.3632321953949864),
+       ('South', 'Manufacturing', 2.35086845930782),
+       ('South', 'Education', 53.272407154429423),
+       ('South', 'Healthcare', 56.68070233253686),
+       ('East', 'Service', 5.9745703176360525),
+       ('East', 'Manufacturing', 93.840942619447858),
+       ('East', 'Education', 78.067752261015244),
+       ('East', 'Healthcare', 19.703894654017773),
+       ('West', 'Service', 32.015715993438917),
+       ('West', 'Manufacturing', 10.914876835171071),
+       ('West', 'Education', 41.714531295305711),
+       ('West', 'Healthcare', 81.458571751676629)], 
+      dtype=[('Region', '|S5'), ('Sector', '|S13'), ('Amount', '<f8')])
+      
+The `deletecols` method interacts with the `coloring` attribute of the tabarray, removing deleted column names from any colors that contained those names (and removing empty colors rendered empty).
+
+**Renaming Columns**
+
+To rename a column, use the `renamecol` method.   This method works in-place. 
+
+>>> X.renamecol('Sector','Industry')
+>>> X
+tabarray([('North', 'Service', 44.497368897699261, 85937),
+       ('North', 'Manufacturing', 88.752549661587452, 305),
+       ('North', 'Education', 46.304921839816174, 90568),
+       ('North', 'Healthcare', 12.428147250824761, 52493),
+       .  .  . 
+       ('West', 'Education', 41.714531295305711, 85876),
+       ('West', 'Healthcare', 81.458571751676629, 43660)], 
+      dtype=[('Region', '|S5'), ('Industry', '|S13'), ('Amount', '<f8'), ('Population', '<i4')])
+
+The `renamecol` method modifies the `coloring` attribute to reflect the new name of the column in any colors that contain the original column.  
+
+
+**Row-wise Concatenation**
+
+The "rowstack" method concatenates arrays with identical column names and data types along the "vertical" (row) axis.   For instance, suppose we have some more rows:
+
+>>> Recs2 = [('Australia', 'Service', 62.78911616553178, 18909),
+ ('Australia', 'Manufacturing', 43.237004162761536, 89819),
+ ('Australia', 'Education', 7.3179911226685768, 80509),
+ ('Australia', 'Healthcare', 43.786780196357846, 2538),
+ ('Africa', 'Service', 80.145538085436243, 6139),
+ ('Africa', 'Manufacturing', 75.418977039990594, 42248),
+ ('Africa', 'Education', 44.568168511082121, 35601),
+ ('Africa', 'Healthcare', 56.85900369948218, 53300),
+ ('Asia', 'Service', 28.204920225419684, 68860),
+ ('Asia', 'Manufacturing', 89.439637471772429, 52956),
+ ('Asia', 'Education', 83.189892771508084, 65450),
+ ('Asia', 'Healthcare', 44.137049956174444, 43584),
+ ('Europe', 'Service', 28.416082788965149, 52706),
+ ('Europe', 'Manufacturing', 77.983749310614229, 59061),
+ ('Europe', 'Education', 80.596916611665861, 14617),
+ ('Europe', 'Healthcare', 95.823135356930905, 2341)]
+>>> X2 = tb.tabarray(records = Recs2,names=['Region','Sector','Amount','Population'])
+>>> len(X2)
+16
+
+Then, we can concatenate `X` and `X2` (row-wise) like this:
+
+>>> Y = X.rowstack(X2)
+>>> len(Y)
+32
+>>> print Y
+[('North', 'Service', 44.497368897699261, 85937)
+ ('North', 'Manufacturing', 88.752549661587452, 305)
+ ('North', 'Education', 46.304921839816174, 90568)
+ ('North', 'Healthcare', 12.428147250824761, 52493)
+ ('South', 'Service', 7.3632321953949864, 85280)
+ ('South', 'Manufacturing', 2.35086845930782, 95578)
+ ('South', 'Education', 53.272407154429423, 11823)
+ ('South', 'Healthcare', 56.68070233253686, 32669)
+ ('East', 'Service', 5.9745703176360525, 81417)
+ ('East', 'Manufacturing', 93.840942619447858, 26229)
+ ('East', 'Education', 78.067752261015244, 62454)
+ ('East', 'Healthcare', 19.703894654017773, 63346)
+ ('West', 'Service', 32.015715993438917, 72732)
+ ('West', 'Manufacturing', 10.914876835171071, 23455)
+ ('West', 'Education', 41.714531295305711, 85876)
+ ('West', 'Healthcare', 81.458571751676629, 43660)
+ ('Australia', 'Service', 62.78911616553178, 18909)
+ ('Australia', 'Manufacturing', 43.237004162761536, 89819)
+ ('Australia', 'Education', 7.3179911226685768, 80509)
+ ('Australia', 'Healthcare', 43.786780196357846, 2538)
+ ('Africa', 'Service', 80.145538085436243, 6139)
+ ('Africa', 'Manufacturing', 75.418977039990594, 42248)
+ ('Africa', 'Education', 44.568168511082121, 35601)
+ ('Africa', 'Healthcare', 56.85900369948218, 53300)
+ ('Asia', 'Service', 28.204920225419684, 68860)
+ ('Asia', 'Manufacturing', 89.439637471772429, 52956)
+ ('Asia', 'Education', 83.189892771508084, 65450)
+ ('Asia', 'Healthcare', 44.137049956174444, 43584)
+ ('Europe', 'Service', 28.416082788965149, 52706)
+ ('Europe', 'Manufacturing', 77.983749310614229, 59061)
+ ('Europe', 'Education', 80.596916611665861, 14617)
+ ('Europe', 'Healthcare', 95.823135356930905, 2341)]
+
+Multiple tabarrays can be stacked by listing them:
+
+>>> Y = X.rowstack([X,X2])
+
+produces a tabarray with two copies of `X` concatenated with a copy of `X2`.
+
+The `rowstack` method can handle the case where there are differing column names in the tabarrays being concatenated by removing the non-common attributes, filling in with null values, or throwing an error (the behavior is selected as a function of the `mode` parameter).  See :func:`tabular.spreadsheet.rowstack` for more detailed information.   The `rowstack` method interacts properly with the `coloring` attribute by retaining whatever portions of the colorings of the original arrays still make sense for the resulting stacked array.  
+
+
+**Column-wise Concatenation** 
+
+The "colstack" method concatenates arrays with disjoint column names but identical lengths along the "horizontal" (column) axis.    For instance, suppose we're given some additional columns of data:
+
+>>> Z = tb.tabarray(columns = [numpy.random.rand(16),numpy.array(['Yes','No'])[numpy.random.randint(0,2,size = (16,))]],names = ['Importance','Modernized'])
+>>> Z
+tabarray([(0.42263974346204458, 'No'), (0.35687607117324249, 'Yes'),
+       (0.4972286192541584, 'No'), (0.37761474850679355, 'No'),
+       (0.9481374129174398, 'No'), (0.22866203600097135, 'No'),
+       (0.92050941713548973, 'No'), (0.39013443361379574, 'Yes'),
+       (0.62542365756991358, 'No'), (0.082422464992163325, 'Yes'),
+       (0.60083950050239943, 'No'), (0.74672726077208473, 'Yes'),
+       (0.38234622821972242, 'Yes'), (0.88061266623705603, 'Yes'),
+       (0.29046395700065586, 'No'), (0.14818747463117454, 'No')], 
+      dtype=[('Importance', '<f8'), ('Modernized', '|S3')])
+
+Then we can concatenate `X` and `Z` like this:
+
+>>> Y = X.colstack(Z)
+>>> Y
+tabarray([ ('North', 'Service', 44.497368897699261, 85937, 0.42263974346204458, 'No'),
+       ('North', 'Manufacturing', 88.752549661587452, 305, 0.35687607117324249, 'Yes'),
+       ('North', 'Education', 46.304921839816174, 90568, 0.4972286192541584, 'No'),
+       ('North', 'Healthcare', 12.428147250824761, 52493, 0.37761474850679355, 'No'),
+       ('South', 'Service', 7.3632321953949864, 85280, 0.9481374129174398, 'No'),
+       ('South', 'Manufacturing', 2.35086845930782, 95578, 0.22866203600097135, 'No'),
+       ('South', 'Education', 53.272407154429423, 11823, 0.92050941713548973, 'No'),
+       ('South', 'Healthcare', 56.68070233253686, 32669, 0.39013443361379574, 'Yes'),
+       ('East', 'Service', 5.9745703176360525, 81417, 0.62542365756991358, 'No'),
+       ('East', 'Manufacturing', 93.840942619447858, 26229, 0.082422464992163325, 'Yes'),
+       ('East', 'Education', 78.067752261015244, 62454, 0.60083950050239943, 'No'),
+       ('East', 'Healthcare', 19.703894654017773, 63346, 0.74672726077208473, 'Yes'),
+       ('West', 'Service', 32.015715993438917, 72732, 0.38234622821972242, 'Yes'),
+       ('West', 'Manufacturing', 10.914876835171071, 23455, 0.88061266623705603, 'Yes'),
+       ('West', 'Education', 41.714531295305711, 85876, 0.29046395700065586, 'No'),
+       ('West', 'Healthcare', 81.458571751676629, 43660, 0.14818747463117454, 'No')], 
+      dtype=[('Region', '|S5'), ('Sector', '|S13'), ('Amount', '<f8'), ('Population', '<i4'), ('Importance', '<f8'), ('Modernized', '|S3')])
+      
+Multiple tabarrays can be stacked by listing them in the argument to the `colstack` method, e.g.:
+
+>>> X.colstack([Z1,Z2,Z3]) 
+      
+The `colstack` method can handle the case where there are some common attributes in the column names of the tabarrays being concatenated,  by selecting the first instance of each common, removing all common columns, renaming all common columns according to a simple convention, or throwing an error (the behavior is selected as a function of the `mode` parameter).  See :func:`tabular.spreadsheet.colstack` for more detailed information.   The `colstack` method interacts properly with the `coloring` attribute by retaining whatever portions of the colorings of the original arrays still make sense for the resulting stacked array.       
+
+.. _replace:
+
+Replace
+-------------------
+
+Performs an in-place  "find and replace" operation.   The `replace` method is able to replace instances of numerical data types, as well as strings.    There are two modes for string replacement, "strict replacement", with the parameter `strict = True` (this is the default), and "substring replacement", with the paramter `strict = False`.   
+
+
+**Strict replacement** (default)
+
+>>> Y = X.copy()
+>>> Y.replace('Education','Taxes')
+>>> print Y
+[('North', 'Service', 44.497368897699261, 85937)
+ ('North', 'Manufacturing', 88.752549661587452, 305)
+ ('North', 'Taxes', 46.304921839816174, 90568)
+ ('North', 'Healthcare', 12.428147250824761, 52493)
+ ('South', 'Service', 7.3632321953949864, 85280)
+ ('South', 'Manufacturing', 2.35086845930782, 95578)
+ ('South', 'Taxes', 53.272407154429423, 11823)
+ ('South', 'Healthcare', 56.68070233253686, 32669)
+ ('East', 'Service', 5.9745703176360525, 81417)
+ ('East', 'Manufacturing', 93.840942619447858, 26229)
+ ('East', 'Taxes', 78.067752261015244, 62454)
+ ('East', 'Healthcare', 19.703894654017773, 63346)
+ ('West', 'Service', 32.015715993438917, 72732)
+ ('West', 'Manufacturing', 10.914876835171071, 23455)
+ ('West', 'Taxes', 41.714531295305711, 85876)
+ ('West', 'Healthcare', 81.458571751676629, 43660)]
+
+
+**Substring replacement** (`strict = False`)
+
+>>> Y = X.copy()
+>>> Y.replace('e','B',strict=False)
+>>> print Y
+[('North', 'SBrvicB', 17.705551782625339, 97606)
+ ('North', 'Manufacturing', 0.032839567646336665, 81753)
+ ('North', 'Education', 60.254477174682428, 71685)
+ ('North', 'HBalthcarB', 16.166448331277937, 46748)
+ ('South', 'SBrvicB', 8.9433677467666168, 65083)
+ ('South', 'Manufacturing', 45.823559323609942, 20597)
+ ('South', 'Education', 80.569583383167782, 73317)
+ ('South', 'HBalthcarB', 58.683132072010615, 27098)
+ ('East', 'SBrvicB', 77.821939745712882, 58469)
+ ('East', 'Manufacturing', 42.098761562516188, 45922)
+ ('East', 'Education', 45.091344059180692, 14944)
+ ('East', 'HBalthcarB', 32.469571128425443, 39130)
+ ('WBst', 'SBrvicB', 1.8610008319782101, 30951)
+ ('WBst', 'Manufacturing', 63.734884926329691, 18894)
+ ('WBst', 'Education', 7.7587790567305586, 97876)
+ ('WBst', 'HBalthcarB', 85.300210096855707, 78262)]
+
+The `replace` method also has two additional keyword arguments, `rows` and `cols`, which respectively restrict the rows and columns on which the replacement will be made.  
+
+>>> Y = X.copy()
+>>> Y.replace('e','B',strict=False,cols='Region')
+>>> print Y
+[('North', 'Service', 17.705551782625339, 97606)
+ ('North', 'Manufacturing', 0.032839567646336665, 81753)
+ ('North', 'Education', 60.254477174682428, 71685)
+ ('North', 'Healthcare', 16.166448331277937, 46748)
+ ('South', 'Service', 8.9433677467666168, 65083)
+ ('South', 'Manufacturing', 45.823559323609942, 20597)
+ ('South', 'Education', 80.569583383167782, 73317)
+ ('South', 'Healthcare', 58.683132072010615, 27098)
+ ('East', 'Service', 77.821939745712882, 58469)
+ ('East', 'Manufacturing', 42.098761562516188, 45922)
+ ('East', 'Education', 45.091344059180692, 14944)
+ ('East', 'Healthcare', 32.469571128425443, 39130)
+ ('WBst', 'Service', 1.8610008319782101, 30951)
+ ('WBst', 'Manufacturing', 63.734884926329691, 18894)
+ ('WBst', 'Education', 7.7587790567305586, 97876)
+ ('WBst', 'Healthcare', 85.300210096855707, 78262)]
+>>> Y = X.copy()
+>>> Y.replace('e','B',strict=False,rows=X['Region']=='North')
+>>> print Y
+[('North', 'SBrvicB', 17.705551782625339, 97606)
+ ('North', 'Manufacturing', 0.032839567646336665, 81753)
+ ('North', 'Education', 60.254477174682428, 71685)
+ ('North', 'HBalthcarB', 16.166448331277937, 46748)
+ ('South', 'Service', 8.9433677467666168, 65083)
+ ('South', 'Manufacturing', 45.823559323609942, 20597)
+ ('South', 'Education', 80.569583383167782, 73317)
+ ('South', 'Healthcare', 58.683132072010615, 27098)
+ ('East', 'Service', 77.821939745712882, 58469)
+ ('East', 'Manufacturing', 42.098761562516188, 45922)
+ ('East', 'Education', 45.091344059180692, 14944)
+ ('East', 'Healthcare', 32.469571128425443, 39130)
+ ('West', 'Service', 1.8610008319782101, 30951)
+ ('West', 'Manufacturing', 63.734884926329691, 18894)
+ ('West', 'Education', 7.7587790567305586, 97876)
+ ('West', 'Healthcare', 85.300210096855707, 78262)]
+
+The `replace` method does not modify the `coloring` attribute.
+
+.. _aggregation:
+
+Aggregation
+-----------------------------------------
+
+**Aggregate**
+
+The `aggregate` method collapses a data set into unique values in specified columns, using specified aggregation functions along the other columns. 
+
+The columns on which to aggregate are specified by the `On` argument.  The aggregation functions for the other columns are specified by optional `AggFunc`  and `AggFuncDict` arguments.   `AggFunc` can be set to any callable Python object which takes a 1-D numpy array and returns string or numerical values;  if set, `AggFunc` will be applied as the aggregation function for all columns not listed in `On` argument.   `AggFuncDict` is a dictionary of such aggregation functions whose keys are column names not in `On`; if `a` is in `AggFuncDict.keys()`, then `AggFuncDict[a]` is applied as the aggregation function for values in column `a`, overriding the default and `AggFunc` setting.   If `AggFunc` is not set, then any columns not in `On` or `AggFuncDict.keys()` will be aggregated using the default aggregation functions, which are ``numpy.sum`` for numerically-typed columns, and ``''.join`` for string-typed columns.   
+
+The more factors listed in *On* argument, the "finer" the aggregation, the fewer factors, the "coarser" the aggregation.    For example, if::
+
+	On = ['A','B']
+	
+the resulting data set will have one record for each unique 
+value of pairs (a,b) in:: 
+
+	X[['A','B']]
+
+The `AggFuncDict` argument specifies how to aggregate the factors _not_ listed in `On`, e.g. the so-called `Off` columns. For example, if::
+
+	On = ['A','B'] 
+	
+and *C* is some other column, then:: 
+
+	AggFuncDict['C'] 
+	
+is the function that will be used to reduce to a single value the 
+(potentially multiple) values in the `C` column corresponding 
+to unique values in the `A`, `B` columns.   For instance, if::
+
+	AggFuncDict['C'] = numpy.mean
+
+then the result will be that the values in the `C` column 
+corresponding to a single `A`, `B` value will be averaged.  
+
+If an `Off` column is _not_ provided as a key in `AggFuncDict`, 
+a default aggregator function will be used:  the sum function 
+for numerical columns, concatenation for string columns.   For instance:
+
+>>> Y = X.aggregate(On=['Region'])
+No aggregation function provided for ['Amount', 'Population'] so assuming "sum" by default.
+No aggregation function provided for ['Sector'] so assuming string concatenation by default.
+>>> print Y
+[ ('East', 'ServiceManufacturingEducationHealthcare', 197.48161649583523, 158465)
+ ('North', 'ServiceManufacturingEducationHealthcare', 94.159316856232039, 297792)
+ ('South', 'ServiceManufacturingEducationHealthcare', 194.01964252555496, 186095)
+ ('West', 'ServiceManufacturingEducationHealthcare', 158.65487491189418, 225983)]
+ 
+Aggregation with `Sector` column aggregated to single value of "AllSectors":
+
+>>> X.aggregate(On=['Region'], AggFuncDict={'Sector':lambda x : 'AllSectors'})	
+No aggregation function provided for ['Amount', 'Population'] so assuming "sum" by default.
+[('East', 'AllSectors', 278.57970406902308, 323710)
+ ('North', 'AllSectors', 113.09165272461399, 194045)
+ ('South', 'AllSectors', 329.83407710678244, 182472)
+ ('West', 'AllSectors', 237.79258099725024, 277014)]
+ 
+Aggregation applying averaging instead of sum to `Amount` column:
+ 
+>>> X.aggregate(On=['Region'], AggFuncDict={'Sector':lambda x : 'AllSectors','Amount':numpy.mean})
+ No aggregation function provided for ['Population'] so assuming "sum" by default.
+tabarray([('East', 'AllSectors', 49.370404123958807, 158465),
+       ('North', 'AllSectors', 23.53982921405801, 297792),
+       ('South', 'AllSectors', 48.504910631388739, 186095),
+       ('West', 'AllSectors', 39.663718727973546, 225983)], 
+      dtype=[('Region', '|S5'), ('Sector', '|S10'), ('Amount', '<f8'), ('Population', '<i4')])
+
+
+Let's make a more sophisticated dataset:
+
+>>> Recs2 = [ ('North', 'Service', 17.705551782625339, 97606, 0.35190576151889708, 'Yes')
+ ('North', 'Manufacturing', 0.032839567646336665, 81753, 0.36816843367086127, 'No')
+ ('North', 'Education', 60.254477174682428, 71685, 0.9533195307298914, 'Yes')
+ ('North', 'Healthcare', 16.166448331277937, 46748, 0.37423184119059572, 'No')
+ ('South', 'Service', 8.9433677467666168, 65083, 0.9293990202100757, 'Yes')
+ ('South', 'Manufacturing', 45.823559323609942, 20597, 0.9526252717172915, 'No')
+ ('South', 'Education', 80.569583383167782, 73317, 0.8221424769128064, 'No')
+ ('South', 'Healthcare', 58.683132072010615, 27098, 0.64953131538067299, 'Yes')
+ ('East', 'Service', 77.821939745712882, 58469, 0.013217627689902978, 'No')
+ ('East', 'Manufacturing', 42.098761562516188, 45922, 0.97669338263308181, 'Yes')
+ ('East', 'Education', 45.091344059180692, 14944, 0.52538935469394132, 'No')
+ ('East', 'Healthcare', 32.469571128425443, 39130, 0.22897697362708525, 'No')
+ ('West', 'Service', 1.8610008319782101, 30951, 0.6173652881052909, 'No')
+ ('West', 'Manufacturing', 63.734884926329691, 18894, 0.47942907520062583, 'Yes')
+ ('West', 'Education', 7.7587790567305586, 97876, 0.13371649251748285, 'No')
+ ('West', 'Healthcare', 85.300210096855707, 78262, 0.32432950951279005, 'Yes')]
+>>> Y = tb.tabarray(records = Recs2,names = ['Region','Sector','Amount','Population','Importance','Modernized'])
+
+Now, this aggregation: 
+
+>>> Z = Y.aggregate(['Region','Modernized'],AggFunc=numpy.mean,AggFuncDict={'Sector':', '.join})
+
+makes a list of records containg the average values of 'Amount', 'Population', and 'Importance', for each region, separated by modernization status, and shows which sectors are modernized within each region.  
+
+>>> print Z[['Region','Sector','Modernized']]
+[('East', 'Service, Healthcare, Education', 'No')
+ ('East', 'Manufacturing', 'Yes')
+ ('North', 'Manufacturing, Healthcare', 'No')
+ ('North', 'Service, Education', 'Yes')
+ ('South', 'Education, Manufacturing', 'No')
+ ('South', 'Healthcare, Service', 'Yes')
+ ('West', 'Service, Education', 'No')
+ ('West', 'Healthcare, Manufacturing', 'Yes')]
+>>> Z[['Region','Amount','Modernized']]
+tabarray([('East', 51.794284977773003, 'No'),
+       ('East', 42.098761562516188, 'Yes'),
+       ('North', 8.0996439494621377, 'No'),
+       ('North', 38.980014478653885, 'Yes'),
+       ('South', 63.196571353388862, 'No'),
+       ('South', 33.813249909388617, 'Yes'),
+       ('West', 4.8098899443543841, 'No'),
+       ('West', 74.517547511592696, 'Yes')], 
+      dtype=[('Region', '|S5'), ('Amount', '<f8'), ('Modernized', '|S3')])
+
+The `aggregate` method retains the `coloring` attribute of the original tabarray. 
+
+
+**Aggregate_in**
+
+The `aggregate_in` method takes the aggregate of data set on specified columns, then *adds* the 
+resulting rows back into data set to make a composite object 
+containing both original non-aggregate data rows as well as 
+the aggregate rows.  This way, you can see the original data as well as the aggregates all in the same dataset.   
+The rows of the resulting array that represent aggregated rows are distinguished from the non-aggregate rows 
+by the value in the additional ``'__aggregates__'`` column that is attached. 
+
+For instance, let `Y` be as constructed above in the examples of the use of `aggregate`.   Then:
+
+>>> Z = Y.aggregate_in(['Region'],AggFuncDict={'Sector':', '.join})
+>>> print Z[['Region','Sector','Amount']][(Z['Region'] == 'East') | (Z['Region'] == 'West')]
+[('East', 'Education', 45.091344059180692)
+ ('East', 'Healthcare', 32.469571128425443)
+ ('East', 'Manufacturing', 42.098761562516188)
+ ('East', 'Service', 77.821939745712882)
+ ('East', 'Service, Manufacturing, Education, Healthcare', 197.48161649583523)
+ ('West', 'Education', 7.7587790567305586)
+ ('West', 'Healthcare', 85.300210096855707)
+ ('West', 'Manufacturing', 63.734884926329691)
+ ('West', 'Service', 1.8610008319782101)
+ ('West', 'Service, Manufacturing, Education, Healthcare', 158.65487491189418)]
+
+>>> Z = Y.aggregate_in([],AggFuncDict={'Sector': lambda x : 'AllSectors','Region': lambda x : 'AllRegions','Modernized' : lambda x : ' and '.join(tb.uniqify(x))})
+>>> print Z[['Region','Sector','Amount','Population','Modernized']]
+[('North', 'Service', 17.705551782625339, 97606, 'Yes')
+ ('North', 'Manufacturing', 0.032839567646336665, 81753, 'No')
+ ('North', 'Education', 60.254477174682428, 71685, 'Yes')
+ ('North', 'Healthcare', 16.166448331277937, 46748, 'No')
+ ('South', 'Service', 8.9433677467666168, 65083, 'Yes')
+ ('South', 'Manufacturing', 45.823559323609942, 20597, 'No')
+ ('South', 'Education', 80.569583383167782, 73317, 'No')
+ ('South', 'Healthcare', 58.683132072010615, 27098, 'Yes')
+ ('East', 'Service', 77.821939745712882, 58469, 'No')
+ ('East', 'Manufacturing', 42.098761562516188, 45922, 'Yes')
+ ('East', 'Education', 45.091344059180692, 14944, 'No')
+ ('East', 'Healthcare', 32.469571128425443, 39130, 'No')
+ ('West', 'Service', 1.8610008319782101, 30951, 'No')
+ ('West', 'Manufacturing', 63.734884926329691, 18894, 'Yes')
+ ('West', 'Education', 7.7587790567305586, 97876, 'No')
+ ('West', 'Healthcare', 85.300210096855707, 78262, 'Yes')
+ ('AllRegions', 'AllSectors', 644.31545078951638, 868335, 'Yes and No')]
+
+
+**Further comments**
+
+The `aggregate_in` function supports **multiple aggregation**, meaning that 
+one can first aggregate on one set of factors, then repeat
+aggregation on the result for another set of factors, without 
+the results of the first aggregation interfering the second.  To 
+achieve this, the method adds (or augments, if already 
+present), a column called ``'__aggregates__'`` specifying on which factors the 
+rows that are aggregate rows were aggregated.  Rows added 
+by aggregating on factor `A` (a column in the original data 
+set) will have `A` in the ``'__aggregates__'`` column.  When multiple factors `A1`, `A2` , ... are 
+aggregated on, the notation is a comma-separated list::
+
+	'A1,A2,...'
+
+This way, when you call :func:`tabular.utils.aggregate_in`
+again, the function only aggregates on the columns that have 
+the empty char '' in their ``'__aggregates__'`` column.   
+
+The function also adds (or adds rows to) a '__color__' column,
+specifying Gray-Scale colors for aggregated
+rows that can be used by data viewers for colorizing the  data.   When there are multiple 
+levels of aggregation, the coarser aggregate groups (e.g. on 
+fewer factors) get darker gray color then those on finer 
+aggregate groups (e.g. more factors).  
+
+Like the `aggregate` method, the `aggregate_in` method retains the `coloring` attribute of the original tabarray.
+		
+.. _pivot:		
+
+Pivot
+-------------------
+
+The `pivot` method produces a pivot table of a tabular array.   Intuitively speaking, suppose you have a tabular data set  with two "reference columns" such that the records in the data set are uniquely tagged by pairs of values of the two reference columns, and that most (or all) possible pairs of values are present.  This is just like the `Region` and `Sector` columns in the data set `X` above, where all records are tagged by a unique `Region` and `Sector` value, and all 16 possible combinations of the values of `Region` and `Sector` are present.   The  pivoting of the tabular data on the reference columns produces a two-dimensional array with one axis for the first reference column, and the second axis for the other reference column -- filled in at position [x,y] with the data associated with record tagged with (x,y).   The values of the first reference column remain just where they are, in a single column -- but the values of the second reference column are "transposed" into column headings.    (See `the wikipedia page on pivot tables <http://en.wikipedia.org/wiki/Pivot_table>`_ for more information about pivot tables.)
+
+For example, the pivot of `X` relative to the reference columns `Region` and `Sector` is produced by:
+
+>>> Y = X.pivot('Region','Sector')
+
+The columns in the resulting data set include the first reference column ('Region'), together with columns for each value in the original `Sector` and each original (non-reference) attribute:
+
+>>> Y.dtype.names
+('Region',
+ 'Education_Amount',
+ 'Healthcare_Amount',
+ 'Manufacturing_Amount',
+ 'Service_Amount',
+ 'Education_Population',
+ 'Healthcare_Population',
+ 'Manufacturing_Population',
+ 'Service_Population')
+ 
+You can use the pivot table to access information about related datapoints that would be cumbersome with the original dataset:
+
+>>> Y[['Region','Healthcare_Amount','Healthcare_Population']]
+tabarray([('East', 32.469571128425443, 39130),
+       ('North', 16.166448331277937, 46748),
+       ('South', 58.683132072010615, 27098),
+       ('West', 85.300210096855707, 78262)], 
+      dtype=[('Region', '|S5'), ('Healthcare_Amount', '<f8'), ('Healthcare_Population', '<i4')])
+
+The `pivot` method uses the `coloring` attribute in a nontrivial way.   Specifically, it produces two orthogonal groupings of colorings, one for the sets of columns associated with each original attribute, and one for sets of columns associated with each value of the second reference column (the one that is "transposed").    For instance, with the pivot table `Y` constructed above, we have:
+
+>>> Y.coloring
+{'Amount': ['Region',
+            'Education_Amount',
+            'Healthcare_Amount',
+            'Manufacturing_Amount',
+            'Service_Amount'],
+ 'Population': ['Region',
+                'Education_Population',
+                'Healthcare_Population',
+                'Manufacturing_Population',
+                'Service_Population'],
+ '_Education': ['Region', 'Education_Amount', 'Education_Population'],
+ '_Healthcare': ['Region', 'Healthcare_Amount', 'Healthcare_Population'],
+ '_Manufacturing': ['Region',
+                    'Manufacturing_Amount',
+                    'Manufacturing_Population'],
+ '_Service': ['Region', 'Service_Amount', 'Service_Population']}
+ 
+Thus, it is easy to call up relevant subsets of the columns:
+ 
+>>> Y['Amount']
+tabarray([ ('East', 45.091344059180692, 32.469571128425443, 42.098761562516188, 77.821939745712882),
+       ('North', 60.254477174682428, 16.166448331277937, 0.032839567646336665, 17.705551782625339),
+       ('South', 80.569583383167782, 58.683132072010615, 45.823559323609942, 8.9433677467666168),
+       ('West', 7.7587790567305586, 85.300210096855707, 63.734884926329691, 1.8610008319782101)], 
+      dtype=[('Region', '|S5'), ('Education_Amount', '<f8'), ('Healthcare_Amount', '<f8'), ('Manufacturing_Amount', '<f8'), ('Service_Amount', '<f8')])
+
+>>>  Y['_Education']
+tabarray([('East', 45.091344059180692, 14944),
+       ('North', 60.254477174682428, 71685),
+       ('South', 80.569583383167782, 73317),
+       ('West', 7.7587790567305586, 97876)], 
+      dtype=[('Region', '|S5'), ('Education_Amount', '<f8'), ('Education_Population', '<i4')])
+
+.. _join:
+
+Join
+----------
+
+The `join` method combines two or more tabarrays that share common "key" column(s).   For instance, let:
+
+>>> X1 = X[['Region','Sector','Amount']]
+>>> X2 = X[['Region','Sector','Population']]
+
+`X1` and `X2` both share two columns, `Region` and `Sector`.    To join the two data sets along their common columns:
+
+>>> X1.join(X2)
+Inferring keycols to be: ['Region', 'Sector']
+tabarray([('East', 'Education', 27.300913534209194, 57645),
+       ('East', 'Healthcare', 79.315579226927042, 78858),
+       ('East', 'Manufacturing', 11.550256098748601, 55331),
+       ('East', 'Service', 79.895071543085521, 47919),
+       ('North', 'Education', 74.546045755282648, 79467),
+       ('North', 'Healthcare', 45.973679749219876, 15366),
+       ('North', 'Manufacturing', 43.03577699412331, 46687),
+       ('North', 'Service', 74.066922573923179, 41929),
+       ('South', 'Education', 44.298421981780493, 8654),
+       ('South', 'Healthcare', 2.5495475747373764, 9317),
+       ('South', 'Manufacturing', 96.868543671291746, 72482),
+       ('South', 'Service', 33.599182645022822, 25850),
+       ('West', 'Education', 11.391185565781647, 62572),
+       ('West', 'Healthcare', 56.204438615569586, 51704),
+       ('West', 'Manufacturing', 67.868100963799833, 81922),
+       ('West', 'Service', 48.381200406027581, 21577)], 
+      dtype=[('Region', '|S5'), ('Sector', '|S13'), ('Amount', '<f8'), ('Population', '<i4')])
+
+More generally, the basic syntax for using `join` is::
+
+	Result = X.join(ToMerge, keycols = None)
+	
+where `ToMerge` is a list (or dictionary) of tabular arrays to merge with `X`, and `keycols` is a list of the names of the key columns along which to do the merging.    There are a few restrictions to make the join work:
+
+* each element of `keycol` must be a valid column name in `X` and each array in `ToMerge`, and all of the same data-type.
+* for each column `col`  in `keycols`, and each array `A` in `ToMerge`, the values in `A[col]` must be unique, e.g. no repeats of values -- and same for `X[col]`.
+* the *non*-key-column column names in each of the arrays must be disjoint from each other -- or disjoint after a renaming (see below).
+
+An error will be thrown if these conditions are not met.
+
+If you don't provide a value to `keycols`, the algorithm will attempt to infer which columns should be used by trying to find the largest set of common column names that contain unique values in each array and have the same data type.  An error will be thrown if no such inference can be made.  
+
+**Renaming of Overlapping Columns**
+
+If the non-keycol column names of the arrays overlap, `join` will by default attempt to rename the columns by using a simple convention:  if `ToMerge` is a list, it will append the number in the list to the key associated with the array. 
+
+>>> Recs1 = [('North', 'Service', 80.818237828506838),
+ ('North', 'Manufacturing', 67.065114829789664),
+ ('North', 'Education', 31.043641435185123),
+ ('North', 'Healthcare', 14.196823211749276),
+ ('South', 'Service', 2.3583798234914521)]
+>>> Recs2 = [('North', 'Service', 33.069022471086903),
+ ('North', 'Manufacturing', 63.155520758932305),
+ ('North', 'Education', 70.80529023970098),
+ ('North', 'Healthcare', 40.301231798570171),
+ ('South', 'Service', 13.095729670745381)]
+>>> X1 = tb.tabarray(records = Recs1,names=['Region','Sector','Amount'])
+>>> X2 = tb.tabarray(records = Recs2,names=['Region','Sector','Amount'])
+>>> X1.join(X2,keycols=['Region','Sector'])
+tabarray([('North', 'Education', 33.89847350125865, 70.80529023970098),
+       ('North', 'Healthcare', 64.002383885977835, 40.301231798570171),
+       ('North', 'Manufacturing', 37.952158786266644, 63.155520758932305),
+       ('North', 'Service', 80.925415125696603, 33.069022471086903),
+       ('South', 'Service', 99.959130671311101, 13.095729670745381)], 
+      dtype=[('Region', '|S5'), ('Sector', '|S13'), ('Amount_0', '<f8'), ('Amount_1', '<f8')])
+      
+If the "Names" argument is specified, associated a string with each array, the algorithm will append the string to the overlapping columns from that array:
+
+>>> tb.spreadsheet.join([X1,X2],keycols=['Region','Sector'],Names=['US','China'])
+rec.array([('North', 'Education', 70.80529023970098, 33.89847350125865),
+       ('North', 'Healthcare', 40.301231798570171, 64.002383885977835),
+       ('North', 'Manufacturing', 63.155520758932305, 37.952158786266644),
+       ('North', 'Service', 33.069022471086903, 80.925415125696603),
+       ('South', 'Service', 13.095729670745381, 99.959130671311101)], 
+      dtype=[('Region', '|S5'), ('Sector', '|S13'), ('Amount_US', '<f8'), ('Amount_China', '<f8')])
+
+To call this syntax as tabarray method, simply put all the names (even the one for "self" array) into the Names argument:
+
+>>> X1.join(X2,keycols = ['Region','Sector'],Names =['US','China'])
+
+You can also pass ToMerge as a dictionary, in which the "Names" value is set using the keys of the dictionary:
+
+>>> tb.spreadsheet.join({'US':X1,'China':X2},keycols=['Region','Sector'])
+rec.array([('North', 'Education', 70.80529023970098, 33.89847350125865),
+       ('North', 'Healthcare', 40.301231798570171, 64.002383885977835),
+       ('North', 'Manufacturing', 63.155520758932305, 37.952158786266644),
+       ('North', 'Service', 33.069022471086903, 80.925415125696603),
+       ('South', 'Service', 13.095729670745381, 99.959130671311101)], 
+      dtype=[('Region', '|S5'), ('Sector', '|S13'), ('Amount_China', '<f8'), ('Amount_US', '<f8')])
+
+To call this syntax as tabarray method, use the "selfname" argument to specify the name of the "self" array:
+
+>>> X1.join({'China':X2},keycols = ['Region','Sector'],selfname='US')
+
+
+
+You can override the default renaming scheme using the `renamer` keyword::
+
+	Result = X.join(ToMerge, renamer=YOUR_RENAMER)
+
+See code documentation on the proper format of a "renamer" callable.
+
+
+**Null values for key column differences**
+
+If there are regions of the key columns that are not overlapping between merged arrays, `join` will fill in the relevant entries with null values chosen by default: '0' for integer columns, '0.0' for float columns, and the empty character ('') for string columns.    To see an example of this, reproduce the six-column array with `Importance` and `Modernized` columns from before:
+
+>>> Z = tb.tabarray(columns = [numpy.random.rand(16),numpy.array(['Yes','No'])[numpy.random.randint(0,2,size = (16,))]],names = ['Importance','Modernized'])
+>>> Y = X.colstack(Z)
+>>> Y
+tabarray([ ('North', 'Service', 13.088778892711028, 67596, 0.18826707730244352, 'Yes'),
+       ('North', 'Manufacturing', 22.813364479211508, 63338, 0.65626563269756155, 'No'),
+       ('North', 'Education', 81.156429421114566, 30761, 0.31479753652735576, 'Yes'),
+       ('North', 'Healthcare', 86.244875598461718, 66485, 0.56735528100658272, 'No'),
+       ('South', 'Service', 76.068242217757344, 13494, 0.082452572534186253, 'Yes'),
+       ('South', 'Manufacturing', 34.865213426711293, 60731, 0.61047628783694241, 'No'),
+       ('South', 'Education', 13.819928108417944, 1920, 0.19526920849489482, 'No'),
+       ('South', 'Healthcare', 78.717025896325481, 47973, 0.22455044846971817, 'No'),
+       ('East', 'Service', 11.755228871282952, 48136, 0.61153851819983929, 'Yes'),
+       ('East', 'Manufacturing', 30.665997848975923, 57223, 0.018454588984023856, 'Yes'),
+       ('East', 'Education', 26.128868317404454, 98133, 0.97432988061836912, 'No'),
+       ('East', 'Healthcare', 90.658902866225361, 8020, 0.26506671105041069, 'No'),
+       ('West', 'Service', 26.092797661205747, 90900, 0.4007982236391423, 'Yes'),
+       ('West', 'Manufacturing', 13.751410698077947, 53004, 0.340288299349086, 'No'),
+       ('West', 'Education', 69.468106938165803, 78210, 0.6184587617606857, 'Yes'),
+       ('West', 'Healthcare', 18.701554642792274, 90219, 0.8693245113578898, 'Yes')], 
+      dtype=[('Region', '|S5'), ('Sector', '|S13'), ('Amount', '<f8'), ('Population', '<i4'), ('Importance', '<f8'), ('Modernized', '|S3')])
+
+Now, let's create non-overlapping sub-arrays:
+
+>>> X1 = X[:(3*len(X))/4][['Region','Sector','Amount']] ; X2 = X[len(X)/4:][['Region','Sector','Modernized']]
+>>> len(X1) 
+12
+>>> len(X2)
+12
+>>> print X1['Region']
+['North' 'North' 'North' 'North' 'South' 'South' 'South' 'South' 'East'
+ 'East' 'East' 'East']
+>>> print X2['Region']
+['South' 'South' 'South' 'South' 'East' 'East' 'East' 'East' 'West' 'West'
+ 'West' 'West']
+
+And join them:
+
+>>> X1.join(X2)
+tabarray([('East', 'Education', 19.343004959799416, 'Yes'),
+       ('East', 'Healthcare', 74.602493370043135, 'No'),
+       ('East', 'Manufacturing', 33.072439090797758, 'Yes'),
+       ('East', 'Service', 38.658666249978815, 'No'),
+       ('South', 'Education', 95.520147543817103, 'Yes'),
+       ('South', 'Healthcare', 54.767060883838084, 'Yes'),
+       ('South', 'Manufacturing', 62.18891309580804, 'Yes'),
+       ('South', 'Service', 69.998526628861569, 'Yes'),
+       ('West', 'Education', 0.0, 'Yes'),
+       ('West', 'Healthcare', 0.0, 'No'),
+       ('West', 'Manufacturing', 0.0, 'No'),
+       ('West', 'Service', 0.0, 'No'),
+       ('North', 'Education', 46.795409156298184, ''),
+       ('North', 'Healthcare', 79.47357040970833, ''),
+       ('North', 'Manufacturing', 21.96065279292241, ''),
+       ('North', 'Service', 3.8287948285793294, '')], 
+      dtype=[('Region', '|S5'), ('Sector', '|S13'), ('Amount', '<f8'), ('Modernized', '|S3')])
+
+To override the default choices for null values, you can specify the "nullvals" keyword argument::
+
+	
+	Result = X.join(ToMerge, nullvals = YOUR_NULLVALS)
+	
+See code documentaiton on the proper format for a "nulllvals" callable. 
+

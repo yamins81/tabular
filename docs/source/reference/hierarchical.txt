@@ -1,0 +1,147 @@
+.. _hierarchical:
+
+Hierarchical Data Representation
+=======================================
+
+The Tabular package supports a simple form of column-oriented hierarchical structure.   This hierarchy is supported at two levels:
+
+	* In a data structure:  the :class:`tabular.tabarray.tabarray` class has an attribute called `coloring` which represents groupings of columns.
+	* In a data format: the Tabular package introduces a new file format to represent column-oriented hierarchical structure on disk.  
+	
+
+Column hierarchies and the `coloring` attribute
+--------------------------------------------------------------------------------
+
+Every instance of :class:`tabular.tabarray.tabarray` is initialized with a `coloring` attribute.   This attribute is used to represent hierarchical groupings of columns.    Specifically, for a tabarray `X`::
+
+	X.coloring
+	
+is a Python dictionary whose keys are the names of "color-groups" -- that is, groupings of columns.   For any color group `g`::
+
+	X.coloring[g] 
+	
+is a Python list of names of columns of `X` that belong to group `g`.      Tabarray's index method (and things that use it) recognize the names of the color-groups, so that you can use them just like individual column names. 
+
+For instance, let's make up some data:
+
+>>> import numpy
+>>> import tabular as tb
+>>> Sectors = ['Service','Manufacturing','Education','Healthcare','Entertainment','Taxes']
+>>> Areas =  ['New York','California','Oregon','New Mexico','Virginia','Hunan','Guangdong','Heilongjiang','Bayern','Hesse','Rhineland','Sachsen']
+>>> Recs = [(v,) + tuple(numpy.random.randint(0,10,size=(len(Areas),))) for v in Sectors]
+>>> Data = tb.tabarray(records = Recs,names = ['Sector'] + Areas)
+>>> Data
+tabarray([('Service', 5, 2, 6, 0, 6, 9, 3, 9, 5, 9, 7, 0),
+       ('Manufacturing', 8, 4, 8, 4, 7, 5, 9, 0, 8, 9, 0, 0),
+       ('Education', 6, 9, 6, 5, 5, 9, 1, 4, 6, 0, 4, 9),
+       ('Healthcare', 0, 8, 0, 6, 4, 2, 0, 9, 0, 9, 8, 1),
+       ('Entertainment', 8, 2, 5, 6, 7, 0, 5, 5, 7, 8, 6, 0),
+       ('Taxes', 0, 5, 5, 6, 9, 8, 2, 8, 4, 5, 9, 2)], 
+      dtype=[('Sector', '|S13'), ('New York', '<i4'), ('California', '<i4'), ('Oregon', '<i4'), ('New Mexico', '<i4'), ('Virginia', '<i4'), ('Hunan', '<i4'), ('Guangdong', '<i4'), ('Heilongjiang', '<i4'), ('Bayern', '<i4'), ('Hesse', '<i4'), ('Rhineland', '<i4'), ('Sachsen', '<i4')])
+
+Obviously, there's some extra structure on this information that isn't captured by `Data`:  the first few columns are American states, the next few are Chinese provinces, and the last few are German administrative units.   To encode this extra structure, we use the coloring attribute.   
+
+>>> Data.coloring										#The coloring attribute is initialized as the empty dictionary. 
+{}
+>>> Data.coloring['US'] = ['New York','California','Oregon','New Mexico','Virginia'] 		#put in the US entry . . .
+>>> Data.coloring['China'] = ['Hunan','Guangdong','Heilongjiang']				# . . . the China entry
+>>> Data.coloring['Germany'] = ['Bayern','Hesse','Rhineland','Sachsen']				#. . . the German entry
+
+Now, we can reference the subgroups of columns just like we would reference individual columns:
+
+>>> Data['US']
+tabarray([(5, 2, 6, 0, 6), (8, 4, 8, 4, 7), (6, 9, 6, 5, 5), (0, 8, 0, 6, 4),
+       (8, 2, 5, 6, 7), (0, 5, 5, 6, 9)], 
+      dtype=[('New York', '<i4'), ('California', '<i4'), ('Oregon', '<i4'), ('New Mexico', '<i4'), ('Virginia', '<i4')])
+>>> Data[['Germany','Guangdong']]
+tabarray([(3, 5, 9, 7, 0), (9, 8, 9, 0, 0), (1, 6, 0, 4, 9), (0, 0, 9, 8, 1),
+       (5, 7, 8, 6, 0), (2, 4, 5, 9, 2)], 
+      dtype=[('Guangdong', '<i4'), ('Bayern', '<i4'), ('Hesse', '<i4'), ('Rhineland', '<i4'), ('Sachsen', '<i4')])
+
+You can set the coloring at the instantiation of a tabarray by passing the `coloring` keyword argument to the tabarray constructor:
+
+>>> Data = tb.tabarray(records = Recs,names = Names, coloring = {'US': ['New York', 'California', 'Oregon', 'New Mexico', 'Virginia'],'China':['Hunan','Guangdong','Heilongjiang']})
+>>> Data.coloring
+{'China': ['Hunan', 'Guangdong', 'Heilongjiang'],
+ 'US': ['New York', 'California', 'Oregon', 'New Mexico', 'Virginia']}
+
+Colorings can encode nested and overlapping hierarchies. For instance:
+
+>>> Data.coloring['Western'] = ['California','Oregon','New Mexico']
+>>> Data['Western']
+tabarray([(2, 6, 0), (4, 8, 4), (9, 6, 5), (8, 0, 6), (2, 5, 6), (5, 5, 6)], 
+      dtype=[('California', '<i4'), ('Oregon', '<i4'), ('New Mexico', '<i4')])
+>>> Data.coloring['Southern'] = ['Virginia','Hunan','Guangdong','Bayern']
+
+Coloring information is handled properly by tabarray methods.  For instance `__getitem__` handles coloring by intersection of columns:
+
+>>> Data['US'].coloring
+{'Western': ['California', 'Oregon', 'New Mexico']}
+>>> Data['US']['Western']
+>>> Data[['California','New York','Oregon']].coloring
+{'Western': ['California', 'Oregon']}
+tabarray([(2, 6, 0), (4, 8, 4), (9, 6, 5), (8, 0, 6), (2, 5, 6), (5, 5, 6)], 
+      dtype=[('California', '<i4'), ('Oregon', '<i4'), ('New Mexico', '<i4')])
+>>> Data['Germany'].coloring
+{'Southern': ['Bayern']}
+>>> Data['Southern']['China']
+tabarray([(4, 5), (3, 6), (3, 0), (0, 7), (7, 2), (0, 4)], 
+      dtype=[('Hunan', '<i4'), ('Guangdong', '<i4')])
+
+As another example, the `colstack` handles coloring by union of columns:
+
+>>> USNames = ['New York', 'California', 'Oregon', 'New Mexico', 'Virginia']
+>>> USRecs = [tuple(numpy.random.randint(0,10,size = (len(USNames),))) for v in Sectors]
+>>> USData = tb.tabarray(records = USRecs,names = USNames,coloring={'Western':['California','Oregon','New Mexico']})
+>>> ChinaNames = ['Hunan', 'Guangdong', 'Heilongjiang']
+>>> ChinaRecs = [tuple(numpy.random.randint(0,10,size = (len(ChinaNames),))) for v in Sectors]
+>>> ChinaData = tb.tabarray(records = ChinaRecs,names = ChinaNames,coloring={'Southern':['Guangdong','Hunan']})
+>>> Z = USData.colstack(ChinaData)				
+>>> Z.coloring
+{'Southern': ['Guangdong', 'Hunan'],
+ 'Western': ['California', 'Oregon', 'New Mexico']}
+ 
+Some tabarray methods make more sophisticated use of coloring.   For instance, the `pivot` method uses coloring to encode the 2-D structure of a pivot table.  (See :ref:`pivot documentation <pivot>`.)
+
+
+The Hierarchical Separated Variable File Format
+-------------------------------------------------------------------------------------
+
+The Tabular package introduces a new file format to represent column-oriented hierarchical structure (e.g. as represented by the tabarray coloring attribute).  In this format, the data is stored in regular text files inside of directories whose file structure explicitly represents hierarchical structure on the columns. 
+
+A hierarchical separated variable (HSV) file is a directory containing a separate text file for each column of tabular data.  Groups of columns (e.g. columns in the same color group) are stored in subdirectories which are themselves HSV files. 
+
+To follow the examples on this page, **download** the tab-separated text file, :download:`example.tsv<data/example.tsv>`. It represents the following data: 
+
+.. image:: images/example_tsv.png
+
+Load the example data and save it as a HSV file.
+
+>>> x = tb.tabarray(SVfile='example.tsv')
+>>> x.saveHSV('example_nocolor.hsv')
+
+This produces a directory called 'example_nocolor.hsv' with 7 text files:  one for each column of data, plus a header file that orders the columns, ``header.txt``.  Notice that the data type of each column of data is stored in the name of the corresponding text file.
+
+.. image:: images/example_nocolor_hsv.png
+
+You can load back the data using the `HSVfile` argument of the tabarray constructor.
+
+>>> tb.tabarray(HSVfile='example_nocolor.hsv')
+
+As above, suppose you wanted to use the `coloring` attribute to group the ``color`` and ``size`` columns under the coloring name ``info``, and the ``June`` and ``July`` columns under ``price``.  
+
+>>> x.coloring = {'info': ['color', 'size'], 'price': ['June', 'July']}
+
+Save the example data, now with the `coloring` attribute giving hierarchical structure on the columns, to a HSV file. 
+
+>>> x.saveHSV('example_color.hsv')
+
+This produces a directory called 'example_nocolor.hsv'.  Each column of data is still stored in a separate text file, but now columns corresponding to the same `coloring` key are grouped together in HSV subdirectories named by their `coloring`, and each HSV directory contains a ``header.txt`` file. 
+
+.. image:: images/example_color_hsv.png
+
+Now when you load this structured HSV file, the `coloring` is inferred from the file directory structure.
+
+>>> tb.tabarray(HSVfile='example_color.hsv')
+
+Note that the HSV file format is of course not required for storing a tabarray's hierarchical structure, and the load and save methods can be used to read and write regular separated variable text files with hierarchical structure on the columns, as shown on the page about tabarray input and output. 

@@ -1,0 +1,407 @@
+QuickStart
+======================
+
+Import tabular like this:
+
+>>> import tabular as tb			
+
+
+Making Tabular Arrays
+----------------------------------------
+
+The class :class:`tabular.tabarray.tabarray` is a data structure designed to hold and manipulate tabular data.   **tabarray** objects are always created like this:
+
+	X = tb.tabarray(some data...)
+	
+Calling ``tb.tabarray`` always returns an instance of the :class:`tabular.tabarray.tabarray` class, and such **tabarray** objects can be created with a variety of types of input data.    
+
+The basic idea is that your input data will often be a native Python object (like a list of tuples) or a text file (like a CSV).   By putting this data into a **tabarray** object, you'll get a representation of the data that has powerful row and column selection, filtering, analysis, and manipulation properties with a very simple syntax.
+
+
+**Row data:** For instance, suppose your data is a Python list of tuples, each element of which represents a row:
+
+>>> Recs = [('North', 'Service', 44.497368897699261, 85937),
+ ('North', 'Manufacturing', 88.752549661587452, 305),
+ ('North', 'Education', 46.304921839816174, 90568),
+ ('North', 'Healthcare', 12.428147250824761, 52493),
+ ('South', 'Service', 7.3632321953949864, 85280),
+ ('South', 'Manufacturing', 2.35086845930782, 95578),
+ ('South', 'Education', 53.272407154429423, 11823),
+ ('South', 'Healthcare', 56.68070233253686, 32669),
+ ('East', 'Service', 5.9745703176360525, 81417),
+ ('East', 'Manufacturing', 93.840942619447858, 26229),
+ ('East', 'Education', 78.067752261015244, 62454),
+ ('East', 'Healthcare', 19.703894654017773, 63346),
+ ('West', 'Service', 32.015715993438917, 72732),
+ ('West', 'Manufacturing', 10.914876835171071, 23455),
+ ('West', 'Education', 41.714531295305711, 85876),
+ ('West', 'Healthcare', 81.458571751676629, 43660)]
+
+Put the data into a tabular array with column names 'Region', 'Sector', 'Amount', 'Population', using the "records" and "names" keyword arguments:
+
+>>> X = tb.tabarray(records = Recs, names=['Region','Sector','Amount','Population'])
+>>> X
+tabarray([('North', 'Service', 44.497368897699261, 85937),
+       ('North', 'Manufacturing', 88.752549661587452, 305),
+       ('North', 'Education', 46.304921839816174, 90568),
+       ('North', 'Healthcare', 12.428147250824761, 52493),
+        .  .  .
+       ('West', 'Manufacturing', 10.914876835171071, 23455),
+       ('West', 'Education', 41.714531295305711, 85876),
+       ('West', 'Healthcare', 81.458571751676629, 43660)], 
+      dtype=[('Region', '|S5'), ('Sector', '|S13'), ('Amount', '<f8'), ('Population', '<i4')])
+
+**Column data:**  If your data is a list of columns, like this:
+
+>>> Cols = [('North', 'North', 'North', 'North', 'South', 'South', 'South', 'South',
+ 'East', 'East', 'East', 'East', 'West', 'West', 'West', 'West'), 
+ ('Service', 'Manufacturing', 'Education', 'Healthcare', 'Service', 
+ 'Manufacturing', 'Education', 'Healthcare', 'Service', 'Manufacturing', 
+ 'Education', 'Healthcare', 'Service', 'Manufacturing', 'Education', 'Healthcare'), 
+ (81.749690102163314, 74.023848861551798, 32.515259350801131, 49.606447425664648, 
+ 11.748647385553801, 37.258888460591535, 34.364104643975423, 7.0963777523329608,
+ 75.359680733433933, 46.357633526256734, 68.819758428065498, 67.493509469400962, 
+ 19.816892327675639, 55.942915632272758, 18.294195106203382, 55.55884722919324), 
+ (99896, 83758, 9808, 60760, 60957, 99498, 74334, 66600, 62984, 5519, 
+ 96958, 7764, 2987, 88673, 7026, 32438)]
+
+Then use the "columns" keyword argument to create a tabular array:
+
+>>> X = tb.tabarray(columns = Cols, names=['Region','Sector','Amount','Population'])
+>>> X
+tabarray([('North', 'Service', 44.497368897699261, 85937),
+       ('South', 'Service', 7.3632321953949864, 85280),
+       ('East', 'Service', 5.9745703176360525, 81417),
+       ('West', 'Service', 32.015715993438917, 72732)], 
+      dtype=[('Region', '|S5'), ('Sector', '|S7'), ('Amount', '<f8'), ('Population', '<i4')])
+      
+Tabular arrays can also be created from NumPy arrays by using the "array" keyword argument, and a variety of other ways (see :ref:`construction` for more details.)
+
+
+**Length and data type**
+
+The length of a tabular array is its number of records:
+
+>>> len(X)							#number of records
+16
+
+Tabarrays have associated dtype objects, containing the column names and the data type of each column:
+
+>>> X.dtype				
+dtype([('Region', '|S5'), ('Sector', '|S13'), ('Amount', '<f8'), ('Population', '<i4')])
+>>> len(X.dtype)						#number of columns
+4
+>>> X.dtype.names						#column names
+('Region', 'Sector', 'Amount', 'Population')
+
+
+Selection and Filtering
+----------------------------------------
+
+**Columns:** Individual columns or groups of columns can be selected:
+
+>>> X['Amount']							#select 'Amount' column
+array([ 44.4973689 ,  88.75254966,  46.30492184,  12.42814725,
+         7.3632322 ,   2.35086846,  53.27240715,  56.68070233,
+         5.97457032,  93.84094262,  78.06775226,  19.70389465,
+        32.01571599,  10.91487684,  41.7145313 ,  81.45857175])
+>>> X[['Amount','Population']]					#select both 'Amount' and 'Population' columns
+tabarray([(44.497368897699261, 85937), (88.752549661587452, 305), (46.304921839816174, 90568),
+       .  .  . 
+       (32.015715993438917, 72732), (10.914876835171071, 23455),
+       (41.714531295305711, 85876), (81.458571751676629, 43660)], 
+      dtype=[('Amount', '<f8'), ('Population', '<i4')])
+
+
+**Rows:** Individual rows or sets of rows can be selected:
+
+>>> X[0]							#select row 0
+ ('North', 'Service', 44.497368897699261, 85937)
+>>> X[4:9]							#select rows 4 through 8
+[('South', 'Service', 7.3632321953949864, 85280)
+ ('South', 'Manufacturing', 2.35086845930782, 95578)
+ ('South', 'Education', 53.272407154429423, 11823)
+ ('South', 'Healthcare', 56.68070233253686, 32669)
+ ('East', 'Service', 5.9745703176360525, 81417)]
+>>> X[[1,5,9,14]]						#select rows 1,5,9,and 14
+[('North', 'Manufacturing', 88.752549661587452, 305)
+ ('South', 'Manufacturing', 2.35086845930782, 95578)
+ ('East', 'Manufacturing', 93.840942619447858, 26229)
+ ('West', 'Education', 41.714531295305711, 85876)]
+ 
+**Comparisons:**  Rich, row-by-row comparisons can be made for columns, returning boolean arrays.   
+
+>>> X['Sector'] == 'Manufacturing'				#compare to a scalar constant value
+array([False,  True, False, False, False,  True, False, False, False,
+        True, False, False, False,  True, False, False], dtype=bool)
+>>> X['Amount'] > .0001*X['Population']				#compare one column to another array of the same length
+array([ True,  True,  True,  True, False, False,  True,  True, False,
+        True,  True,  True,  True,  True,  True,  True], dtype=bool)
+        
+        
+**Filtering:**  The resulting boolean arrays can be used to `select` rows:
+
+>>> print X[X['Sector'] == 'Manufacturing']			#get rows where "Sector" entry is "Manufacturing"
+[('North', 'Manufacturing', 88.752549661587452, 305)
+ ('South', 'Manufacturing', 2.35086845930782, 95578)
+ ('East', 'Manufacturing', 93.840942619447858, 26229)
+ ('West', 'Manufacturing', 10.914876835171071, 23455)]
+>>> print X[X['Amount'] > 50]					#get rows where "Amount" entry exceeds 50
+[('North', 'Manufacturing', 88.752549661587452, 305)
+ ('South', 'Education', 53.272407154429423, 11823)
+ ('South', 'Healthcare', 56.68070233253686, 32669)
+ ('East', 'Manufacturing', 93.840942619447858, 26229)
+ ('East', 'Education', 78.067752261015244, 62454)
+ ('West', 'Healthcare', 81.458571751676629, 43660)]
+
+Logical connectives 'AND' (&) and 'OR' (|) can be used to combine boolean arrays for more sophisticated filtering:
+
+>>> X[(X['Amount'] > 50) & (X['Sector'] == 'Manufacturing')]	#select rows where "Amount" > 50 and "Sector" = "Manufacturing"
+[('North', 'Manufacturing', 88.752549661587452, 305)
+ ('East', 'Manufacturing', 93.840942619447858, 26229)]
+>>> X[((X['Amount'] > 50) & (X['Sector'] == 'Manufacturing')) | (X['Population'] > 90000)]   
+[('North', 'Manufacturing', 88.752549661587452, 305)
+ ('North', 'Education', 46.304921839816174, 90568)
+ ('South', 'Manufacturing', 2.35086845930782, 95578)
+ ('East', 'Manufacturing', 93.840942619447858, 26229)]
+
+**Reassignment:**  The contents of a tabarray can be changed by assignment, both for individual values:
+
+>>> print X['Amount'][0]
+44.497
+>>> X['Amount'][0] = 51.004
+>>> print X['Amount']
+51.004
+
+as well as whole columns:
+
+>>> X['Amount'] = X['Amount'] + 10
+>>> X['Amount']
+array([  61.004     ,   98.75254966,   56.30492184,   22.42814725,
+         17.3632322 ,   12.35086846,   63.27240715,   66.68070233,
+         15.97457032,  103.84094262,   88.06775226,   29.70389465,
+         42.01571599,   20.91487684,   51.7145313 ,   91.45857175])
+
+Row and column selection features can be combined:
+
+>>> X['Amount'][X['Sector'] == 'Manufacturing']			#get "Amount" entries for rows where "Sector" entry is "Manufacturing" 
+array([  98.75254966,   12.35086846,  103.84094262,   20.91487684])
+
+and also combined with assignments:
+
+>>> X['Amount'][X['Sector'] == 'Manufacturing'] = X['Amount'][X['Sector'] == 'Manufacturing'] - 10		#add 10 to all values selected above
+>>> X['Amount']
+array([ 61.004     ,  88.75254966,  56.30492184,  22.42814725,
+        17.3632322 ,   2.35086846,  63.27240715,  66.68070233,
+        15.97457032,  93.84094262,  88.06775226,  29.70389465,
+        42.01571599,  10.91487684,  51.7145313 ,  91.45857175])
+
+For more information about selection and filtering, see :ref:`Manipulating Tabular Arrays:  Indexing and Filtering <indexing-and-filtering>`.
+
+
+Matrix Math
+----------------------
+
+Numerical columns can be "extracted" into arrays on which NumPy mathematical operations can be performed:
+
+>>> X[['Amount','Population']].extract()
+array([[  6.10040000e+01,   8.59370000e+04],
+       [  8.87525497e+01,   3.05000000e+02],
+       [  5.63049218e+01,   9.05680000e+04],
+       [  2.24281473e+01,   5.24930000e+04],
+       [  1.73632322e+01,   8.52800000e+04],
+       [  2.35086846e+00,   9.55780000e+04],
+       [  6.32724072e+01,   1.18230000e+04],
+       [  6.66807023e+01,   3.26690000e+04],
+       [  1.59745703e+01,   8.14170000e+04],
+       [  9.38409426e+01,   2.62290000e+04],
+       [  8.80677523e+01,   6.24540000e+04],
+       [  2.97038947e+01,   6.33460000e+04],
+       [  4.20157160e+01,   7.27320000e+04],
+       [  1.09148768e+01,   2.34550000e+04],
+       [  5.17145313e+01,   8.58760000e+04],
+       [  9.14585718e+01,   4.36600000e+04]])
+>>> print 3*X[['Amount','Population']].extract().transpose() + 2
+[[  1.85012000e+02   2.68257649e+02   1.70914766e+02   6.92844418e+01
+    5.40896966e+01   9.05260538e+00   1.91817221e+02   2.02042107e+02
+    4.99237110e+01   2.83522828e+02   2.66203257e+02   9.11116840e+01
+    1.28047148e+02   3.47446305e+01   1.57143594e+02   2.76375715e+02]
+ [  2.57813000e+05   9.17000000e+02   2.71706000e+05   1.57481000e+05
+    2.55842000e+05   2.86736000e+05   3.54710000e+04   9.80090000e+04
+    2.44253000e+05   7.86890000e+04   1.87364000e+05   1.90040000e+05
+    2.18198000e+05   7.03670000e+04   2.57630000e+05   1.30982000e+05]]
+
+There are a **huge** number of mathematical operations provided by NumPy (see `Numpy Functions <http://www.scipy.org/Numpy_Functions_by_Category>`_ for a partial listing).  
+
+
+Spreadsheet-Style Operations
+----------------------------------------------------
+
+Tabarrays support a variety of "spreadsheet-style" operations, including row/column manipulations, replacements, aggregation, pivoting and joins.
+
+
+**Row & Column Operations**:
+
+>>> Y = X.deletecols(['Population'])				#create new array with "Population" column deleted
+>>> Y.dtype.names
+('Region', 'Sector', 'Amount')
+
+>>> Y = X.addrecords(('West','Surfing',10,10000))		#create new array with additional row 
+>>> print Y[-2:]
+[('West', 'Healthcare', 91.458571751676629, 43660)
+ ('West', 'Surfing', 10.0, 10000)]
+
+>>> Importance = numpy.random.randint(10,size=(16,))
+>>> Y = X.addcols([Importance],names=['Importance'])		#create new array with new "Importance" column
+>>> Y.dtype.names
+('Region', 'Sector', 'Amount', 'Population', 'Importance')
+>>> Y['Importance']
+array([3, 9, 1, 3, 4, 8, 0, 9, 1, 7, 6, 6, 7, 4, 3, 6])
+
+The "rowstack" method concatenates arrays with identical column names and data types along the "vertical" (row) axis:
+
+>>> Y = X.rowstack([X,X,X])					#create new array by concatenating X to itself 3 times
+>>> len(Y)
+64
+>>> Y[0]==Y[16]==Y[32]==Y[48]
+True
+
+The "colstack" method concatenates arrays with disjoint column names but identical lengths along the "horizontal" (column) axis:
+
+>>> X[['Region','Sector']].colstack([X[['Amount']]])
+tabarray([('North', 'Service', 11.568675158203657),
+       ('North', 'Manufacturing', 78.486819271428658),
+       ('North', 'Education', 57.60705040663634),
+       ('North', 'Healthcare', 41.550376687594138),
+       .  .  . 
+       ('West', 'Manufacturing', 54.932402758880414),
+       ('West', 'Education', 68.727826108077394),
+       ('West', 'Healthcare', 81.726623074753874)], 
+      dtype=[('Region', '|S5'), ('Sector', '|S13'), ('Amount', '<f8')])
+
+
+For more information, see :ref:`Manipulating Tabular Arrays:  Row and Column Operations <row-and-column-operations>`.
+
+
+**sort:** The "sort" method provides fast in-place spreadsheet style multi-column sorting.  (:ref:`Manipulating Tabular Arrays:  Sorting <sorting>`.)
+
+>>> X.sort(order=['Region','Sector'])
+>>> X
+[('East', 'Education', 23.097478581186881, 78073)
+ ('East', 'Healthcare', 10.52554515403321, 6751)
+ ('East', 'Manufacturing', 87.72136064848614, 53744)
+ ('East', 'Service', 54.896677290366689, 32747)
+ ('North', 'Education', 57.60705040663634, 53327)
+ ('North', 'Healthcare', 41.550376687594138, 7896)
+ ('North', 'Manufacturing', 78.486819271428658, 39440)
+ ('North', 'Service', 11.568675158203657, 80672)
+ ('South', 'Education', 31.402298595542256, 39531)
+ ('South', 'Healthcare', 79.898317595005963, 70297)
+ ('South', 'Manufacturing', 84.012379396498261, 77165)
+ ('South', 'Service', 62.1631456237237, 70377)
+ ('West', 'Education', 68.727826108077394, 30589)
+ ('West', 'Healthcare', 81.726623074753874, 63049)
+ ('West', 'Manufacturing', 54.932402758880414, 84733)
+ ('West', 'Service', 55.281648099477955, 98990)]
+
+
+**replace:** The "replace" method does fast in-place replacements.  (:ref:`replace`.)
+
+>>> X.replace('Education','Taxes')
+>>> print X
+[('North', 'Service', 20.67236621081404, 54249)
+ ('North', 'Manufacturing', 32.000394550879761, 24839)
+ ('North', 'Taxes', 5.8365701185767671, 97360)
+  .  .  . 
+ ('West', 'Service', 85.240242206812582, 88514)
+ ('West', 'Manufacturing', 51.78347036293308, 37708)
+ ('West', 'Taxes', 76.319284382925062, 97475)
+ ('West', 'Healthcare', 24.449584044579531, 53317)]
+
+
+**aggregate:** The "aggregate" method collapses a data set on unique values in columns specified by the "On" argument, using specified aggregation functions along the other columns (default is to sum). 
+
+>>> X.aggregate(On=['Region'], AggFuncDict={'Sector':lambda x : 'AllSectors'})	#create array containing sums of 'Amount' and 'Population' in each region
+[('East', 'AllSectors', 278.57970406902308, 323710)
+ ('North', 'AllSectors', 113.09165272461399, 194045)
+ ('South', 'AllSectors', 329.83407710678244, 182472)
+ ('West', 'AllSectors', 237.79258099725024, 277014)]
+ 
+See  :ref:`Manipulating Tabular Arrays:  Aggregation <aggregation>` for more information.
+ 
+ 
+**pivot:** The "pivot" method creates a pivot table relative to the specified column name arguments:
+
+>>> Y = X.pivot('Region','Sector')
+>>> print Y.dtype.names
+('Region', 'Education_Amount', 'Healthcare_Amount', 'Manufacturing_Amount', 'Service_Amount', 'Education_Population', 'Healthcare_Population', 'Manufacturing_Population', 'Service_Population')
+>>> Y[['Region','Healthcare_Amount','Healthcare_Population']]
+[('East', 67.330421474002065, 84503) ('North', 54.582321844343419, 17597)
+ ('South', 96.879266479772284, 78169) ('West', 24.449584044579531, 53317)]
+
+See  :ref:`Manipulating Tabular Arrays:  Pivot <pivot>` for more information.
+ 
+
+**join:** The "join" method connects two or more tabarrays that share common "key" column(s):
+
+>>> X1 = X[['Region','Sector','Amount']]
+>>> X2 = X[['Region','Sector','Population']]
+>>> X1.join(X2)
+Inferring keycols to be: ['Region', 'Sector']
+tabarray([('East', 'Education', 27.300913534209194, 57645),
+       ('East', 'Healthcare', 79.315579226927042, 78858),
+       ('East', 'Manufacturing', 11.550256098748601, 55331),
+       ('East', 'Service', 79.895071543085521, 47919),
+       ('North', 'Education', 74.546045755282648, 79467),
+       ('North', 'Healthcare', 45.973679749219876, 15366),
+       ('North', 'Manufacturing', 43.03577699412331, 46687),
+       ('North', 'Service', 74.066922573923179, 41929),
+       ('South', 'Education', 44.298421981780493, 8654),
+       ('South', 'Healthcare', 2.5495475747373764, 9317),
+       ('South', 'Manufacturing', 96.868543671291746, 72482),
+       ('South', 'Service', 33.599182645022822, 25850),
+       ('West', 'Education', 11.391185565781647, 62572),
+       ('West', 'Healthcare', 56.204438615569586, 51704),
+       ('West', 'Manufacturing', 67.868100963799833, 81922),
+       ('West', 'Service', 48.381200406027581, 21577)], 
+      dtype=[('Region', '|S5'), ('Sector', '|S13'), ('Amount', '<f8'), ('Population', '<i4')])
+
+
+See  :ref:`Manipulating Tabular Arrays:  Join <join>` for more information.
+
+
+Saving to / reading from files
+--------------------------------------------------
+
+Tabular arrays can be saved to various file formats, like Comma-Separated-Value (CSV):
+
+>>> X.saveSV('SampleData.csv')    
+
+This writes out the text file 'SampleData.csv' with content::
+
+	#types=str,str,float,int
+	#names=Region,Sector,Amount,Population
+	North,Service,61.003999999999998,85937
+	North,Manufacturing,88.752549661587452,305
+	North,Education,56.304921839816174,90568
+	North,Healthcare,22.428147250824761,52493
+	South,Service,17.363232195394986,85280
+	South,Manufacturing,2.3508684593078204,95578
+	South,Education,63.272407154429423,11823
+	South,Healthcare,66.680702332536868,32669
+	East,Service,15.974570317636053,81417
+	East,Manufacturing,93.840942619447858,26229
+	East,Education,88.067752261015244,62454
+	East,Healthcare,29.703894654017773,63346
+	West,Service,42.015715993438917,72732
+	West,Manufacturing,10.914876835171071,23455
+	West,Education,51.714531295305711,85876
+	West,Healthcare,91.458571751676629,43660
+	
+Conversely, tabular arrays can be loaded in from files:
+
+>>> Y = tb.tabarray(SV='SampleData.csv')
+>>> all(Y == X)
+True
+
+See :ref:`io` for more information, including on other formats. 

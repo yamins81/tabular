@@ -1,0 +1,7 @@
+.. highlight:: rest
+
+:mod:`tabular.fast`
+=========================
+
+.. automodule:: tabular.fast
+	:members:

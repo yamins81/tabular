@@ -1,0 +1,243 @@
+.. _fastops:
+
+Fast Array Operations
+=====================
+
+:mod:`tabular.fast` is a module containing efficient NumPy algorithms for solving list-membership problems.
+		
+
+Motivation
+---------------------
+NumPy arrays are typically used for "matrix math" operations (e.g. linear algebra), while list-membership queries are often handled in Python itself.   For instance, consider the *PathAlong* problem:  given two Python lists of file paths F1 and F2 (in reduced form), find all indices of paths in F1 that are "above": in the file-system sense, paths in F2, together with the corresponding sets of contained paths in F2 for each path in F1.  For example, if::
+	
+	F1 = ['../Data/Dan_Data/', '../Users/DanYamins/','../Users/ElaineAngelino/']
+	
+	F2 = ['../Data/Dan_Data/NPR_Puzzle_Solutions',	'../Data/Dan_Data/NPR_Puzzle_Solutions/AmericaPensacolaPuzzle/', '../Data/Dan_Data/RandomData','../Users/DanYamins/Finance/']
+	
+then find out that:
+	
+* F1[0] is "path above" all items in F2[0:3]
+* F1[1] is "path above" all items in F2[3:4]
+* F2[2] is "path above" no items in F2.
+		
+A typical python solution to the *PathAlong* problem is::
+
+	def PathAlong(F1,F2):
+		L = []
+		for i in F1:
+			Alongs = []
+			for j in F2:
+				if j[:len(i)] == i and ((len(j) > len(i) and j[len(i)]=='/') or i[-1]=='/'):
+					Alongs.append(j)
+			L.append((i,Alongs))
+		return L
+		
+Though this solution works perfectly well, it is quite slow when F1 and F2 are both large lists.   
+
+It turns out that the *PathAlong* problem, along with many other typical list-membership query problems, can be solved with fast NumPy algorithms -- as long as the data types of the lists involved are sufficiently uniform that the lists can be cast into NumPy arrays.  The :mod:`tabular.fast` module contains a set of "building blocks" for such algorithms.  The algorithms are especially useful for constructing efficient spread-sheet style operations on large tabular datasets. 
+
+		
+Membership Testing
+--------------------------------------
+
+**isin**
+
+:func:`tabular.fast.isin` is a fast routine for determining indices of elements in one numpy array that appear in another, returning a boolean array of those indices.   
+
+>>> import tabular.fast as fast
+>>> import numpy, time
+>>> X = numpy.random.randint(10000,size=(10000,))
+>>> Y = numpy.random.randint(4000,size=(10000,))
+>>> Z = fast.isin(X,Y)
+>>> X[0:10]
+array([3383, 8715, 4990, 3314, 3765, 1212, 1090, 8958, 1679,  862])
+>>> Z[0:10]
+array([ True, False, False,  True,  True,  True,  True, False,  True,  True], dtype=bool)
+
+`isin` works not just on numerical arrays, but also on string arrays:
+
+>>> L = numpy.array(['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'])
+>>> [V1,V2,V3] = [numpy.random.randint(26,size=(10000,)),numpy.random.randint(26,size=(10000,)),numpy.random.randint(26,size=(10000,))] 
+>>> H = numpy.array([''.join(a) for a in zip(L[V1],L[V2],L[V3])])
+>>> print H[:10]
+['xhq' 'dkh' 'gfe' 'uef' 'lbt' 'ped' 'lem' 'cyp' 'jli' 'wth']
+>>> [V1,V2,V3] = [numpy.random.randint(26,size=(10000,)),numpy.random.randint(26,size=(10000,)),numpy.random.randint(26,size=(10000,))]
+>>> H2 = numpy.array([''.join(a) for a in zip(L[V1],L[V2],L[V3])]
+>>> print H2[:10]
+['zhz' 'klb' 'qnr' 'noq' 'mzo' 'mzr' 'mjk' 'cmu' 'dnr' 'klb']
+>>> t = time.time() ; Z = fast.isin(H,H2) ; time.time() - t
+0.0076260566711425781
+>>> t = time.time() ; T = [l in H2 for l in H] ; time.time() - t
+2.4915561676025391
+>>> (Z == numpy.array(T)).all()
+True
+>>> H[Z]
+array(['tlz', 'ntm', 'mza', 'rtj', 'dfu', 'rxz', 'jas', 'aei', 'vnk',
+       'lod', 'vse', 'xlt', 'klj', 'xht', 'trz', 'jun', 'upo', 'pfh',
+       'nlp', 'ztl', 'wpy', 'oxn', 'zbc', 'klg', 'tdv', 'rys', 'qpn',
+       'psk', 'vwz', 'wkp', 'gco', 'kak', 'cdc', 'lvg', 'dbd', 'flh',
+       'css', 'tlz', 'vsy', 'xha', 'vpz', 'tdu', 'otj', 'wtz', 'qvc',
+       'uud', 'iuu', 'cej', 'qyj', 'kxa', 'ixy', 'gag', 'mxo'], 
+      dtype='|S3')
+
+**recarrayisin**
+
+:func:`tabular.fast.recarrayisin` is the analog of `isin` for NumPy recarrays.  
+
+>>> L = numpy.array(['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'])
+>>> [V1,V2,V3] = [numpy.random.randint(26,size=(10000,)),numpy.random.randint(26,size=(10000,)),numpy.random.randint(26,size=(10000,))]
+>>> H = numpy.rec.fromrecords([(numpy.random.randint(10),''.join(a)) for a in zip(L[V1],L[V2],L[V3])],names = ['Number','Letters'])
+>>> [V1,V2,V3] = [numpy.random.randint(26,size=(10000,)),numpy.random.randint(26,size=(10000,)),numpy.random.randint(26,size=(10000,))]
+>>> H2 = numpy.rec.fromrecords([(numpy.random.randint(10),''.join(a)) for a in zip(L[V1],L[V2],L[V3])],names = ['Number','Letters'])
+>>> Z = fast.recarrayisin(H,H2)
+>>> t = time.time() ; Z = fast.isin(H,H2) ; time.time() - t
+0.25945591926574707
+>>> t = time.time() ; T = [l in H2 for l in H] ; time.time() - t
+4.2678370475769043
+>>> (Z == numpy.array(T)).all()
+True
+>>> print H[Z][:10]
+[(4, 'xpc') (7, 'umr') (1, 'gmn') (6, 'qub') (6, 'fdz') (6, 'nht')
+ (5, 'uts') (2, 'nlt') (6, 'xzv') (3, 'jae')]
+
+
+Equality Testing
+--------------------------------------
+
+
+**equalspairs**
+
+Given one NumPy array `X` and another sorted numpy array `Y`, :func:`tabular.fast.equalspairs` determines the indices in `Y` which are equal to indices in `X`.   
+
+>>> N = 10000
+>>> Y = numpy.random.randint(0,10,size=(N,))
+>>> Y.sort()
+>>> X = numpy.random.randint(0,10,size=(N,))
+>>> t = time.time() ; [A,B] = equalspairs(X,Y) ; print time.time() - t
+0.00613594055176
+
+For each `i = 0, ...., N`, the values `A[i]` and `B[i]` represent, respectively, the positions in `B` of the first and last appearances of the value `X[i]`, so that: 
+
+	Y[A[i]:B[i]] = Y[Y == X[i]]
+
+For comparison, a (purer) Python approach to this computation:
+
+>>> t = time.time() ; C = numpy.array([min((Y == k).nonzero()[0]) for k in X]) ; print time.time() - t
+3.72342395782
+>>> t = time.time() ; D = numpy.array([1 + max((Y == k).nonzero()[0]) for k in X]) ; time.time() - t
+3.7644798755645752
+>>> (A == C).all() and (B == D).all()
+True
+
+
+**recarrayequalspairs**
+
+:func:`tabular.fast.recarrayequalspairs` is analogous to :func:`tabular.fast.equalspairs`, but works on recarrays.   It is slightly different, of course, because the concept of being sorted is less well-defined for a record array.   Specifically, on record arrays `X` and `Y`, :func:`tabular.fast.recarrayequalspairs` returns a triple:
+	
+	[A,B,s] = fast.recarraypairs(X,Y)
+	
+where `s` is a permutation of `Y` such that for 
+
+	Z = Y[s]
+
+we have 
+
+	Z[A[i]:B[i]] = Z[Z == X[i]]
+
+		
+"Uniqification"
+------------------------------
+
+It is often useful to obtain the unique instance of elements in an array.  
+
+The function :func:`tabular.utils.uniqify` is a fast way to do this, with the additional nice property that it retains the order of the original array.
+
+>>> A = numpy.random.randint(100000,size = (1000000,))
+>>> t = time.time() ; B = numpy.array(tb.uniqify(A)) ; print time.time() - t
+0.492871046066
+
+If retaining order is not important, the function :func:`tabular.fast.arrayuniqify` is even faster.   
+
+>>> t = time.time() ; [D,s] = fast.arrayuniqify(A) ; print time.time() - t
+0.157983064651
+>>> C = A[s][D]
+>>> (numpy.sort(B) == C).all()
+True
+
+:func:`tabular.fast.recarrayuniqify` is a record-array version of :func:`tabular.fast.arrayuniqify`.  
+
+
+Solution to `PathAlong`
+------------------------------------------
+
+Let's return to the problem mentioned at the beginning of this section.   Suppose we have two lists of file paths, and we want to know which elements of the first list are "above" elements of the second list.  The following algorithm uses :func:`tabular.fast.isin` to solve this problem efficiently, the basic strategy being to break up the problem into a set of problems, one for each level of the file hierarchy::
+
+	def getpathalong(Y,Z):
+	
+		Z = Z.copy() ; Z.sort()
+		Y = numpy.array([y + '/' if y[-1] != '/' else y for y in Y])
+		Z = numpy.array([y + '/' if y[-1] != '/' else y for y in Z])
+		SlashList = numpy.array([len(y.split('/')) - 1 for y in Y])
+		Max = max(SlashList) ;  Min = min(SlashList) 
+		W = numpy.zeros(len(Y),int)
+	
+		for i in range(Min,Max+1):
+			T = numpy.array(['/'.join(z.split('/')[:i]) + ('/' if len(z.split('/')) > i else '')  for z in Z ])    
+			L = SlashList == i
+			W[L] = fast.isin(Y[L],T)
+	
+		return W
+		
+>>> F1 = numpy.array(['../Data/Dan_Data/', '../Users/DanYamins/','../Users/ElaineAngelino/','../Data'])
+>>> F2 = numpy.array(['../Data/Dan_Data/NPR_Puzzle_Solutions','../Data/Dan_Data/NPR_Puzzle_Solutions/AmericaPensacolaPuzzle/', '../Data/Dan_Data/RandomData','../Users/DanYamins/Finance/'])
+>>> test.getpathalong(F1,F2)
+array([1, 1, 0, 1])
+
+Of course, it is useful sometimes not only to have which elements of the first list are "above" elements of the second but also the indices in the second list of items they're above.  This algorithm solves that problem::
+
+	def getpathalongpairs(Y,Z):
+	
+		s = Z.argsort() ; Z = Z[s]
+		Y = numpy.array([y + '/' if y[-1] != '/' else y for y in Y])
+		Z = numpy.array([y + '/' if y[-1] != '/' else y for y in Z])
+		SlashList = numpy.array([len(y.split('/')) - 1 for y in Y])
+		Max = max(SlashList) ;  Min = min(SlashList) 
+		W = numpy.zeros(len(Y),int) ; U = numpy.zeros(len(Y),int)
+	
+		for i in range(Min,Max+1):
+			T = numpy.array(['/'.join(z.split('/')[:i]) + ('/' if len(z.split('/')) > i else '')  for z in Z ])    
+			L = SlashList == i
+			[W[L],U[L]] = fast.equalspairs(Y[L], T)
+		return [W,U,s]
+
+Using the same test data as above:
+
+>>> [A,B,s] = test.getpathalongpairs(F1,F2)
+>>> A
+array([0, 3, 0, 0])
+>>> B
+array([0, 3, 4, 0])
+
+Finally, let's solve a seemingly more difficult problem.   Suppose we have a list of pairs of file paths, like so:
+
+>>> Recs = [('Data/Sports/Analysis/Raw1','Data/Sports/Analysis/Computations/'), ('Data/Sports/Analysis/Raw1','Data/Sports/Analysis/Computations/Analysis1.csv'),('Data/Sports/Analysis/Raw1','Data/Sports/Analysis/Computations/Analysis2.csv'),('Data/Sports/Analysis/Raw2','Data/Sports/Analysis/Computations/Analysis3.csv'),('Data/Sports/Analysis/Raw2','Data/Sports/Analysis/Computations/')]
+>>> Recs.sort()
+>>> Data = numpy.rec.fromrecords(Recs,names=['Input','Output'])
+
+Now, suppose what we want to know is:  which records in `Data['Output']` are **strictly above**, in the file-system sense, other recods in the same column, but have the save value of `Data['Input']`?  Here is an efficient solution, using what we've just learned::    
+	
+	def PathPairSolution(R):
+	
+		RR = numpy.array([x + ' ; ' + y for (x,y) in R])
+		[A,B,s] = getpathalongpairs(RR,RR)
+		[C,D] = fast.equalspairs(RR,RR)
+	
+		return zip(D,B)
+
+>>> PathPairSolution(Data)
+[(1, 3), (2, 2), (3, 3), (4, 5), (5, 5)]
+
+
+
+
+

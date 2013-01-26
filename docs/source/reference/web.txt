@@ -1,0 +1,9 @@
+.. _web:
+
+Web & HTML
+==================
+
+HTML representation
+----------------------------------------
+
+See the function :func:`tabular.web.tabular2html` in the :mod:`tabular.web` module.

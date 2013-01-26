@@ -1,0 +1,1 @@
+#metadatadict={'coloring': 1, 'types': 2, 'names': 3}#{'info': ['color', 'size'], 'price': ['June', 'July']}#str	int	str	str	float	float#name	ID	color	size	June	Julybork	1212	blue	big	45.32	46.07mork	4660	green	small	32.18	32.75stork	2219	red	huge	60.93	61.82lork	4488	purple	tiny	0.44	0.38

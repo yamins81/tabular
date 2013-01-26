@@ -1,0 +1,7 @@
+.. highlight:: rest
+
+:mod:`tabular.io`
+==================
+
+.. automodule:: tabular.io
+	:members:
