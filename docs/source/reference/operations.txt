@@ -480,31 +480,46 @@ The `aggregate` method collapses a data set into unique values in specified colu
 
 The columns on which to aggregate are specified by the `On` argument.  The aggregation functions for the other columns are specified by optional `AggFunc`  and `AggFuncDict` arguments.   `AggFunc` can be set to any callable Python object which takes a 1-D numpy array and returns string or numerical values;  if set, `AggFunc` will be applied as the aggregation function for all columns not listed in `On` argument.   `AggFuncDict` is a dictionary of such aggregation functions whose keys are column names not in `On`; if `a` is in `AggFuncDict.keys()`, then `AggFuncDict[a]` is applied as the aggregation function for values in column `a`, overriding the default and `AggFunc` setting.   If `AggFunc` is not set, then any columns not in `On` or `AggFuncDict.keys()` will be aggregated using the default aggregation functions, which are ``numpy.sum`` for numerically-typed columns, and ``''.join`` for string-typed columns.   
 
-The more factors listed in *On* argument, the "finer" the aggregation, the fewer factors, the "coarser" the aggregation.    For example, if::
+The more factors listed in `On` argument, the "finer" is the aggregation, 
+the fewer factors, the "coarser" the aggregation.  For example, if::
 
-	On = ['A','B']
-	
-the resulting data set will have one record for each unique 
-value of pairs (a,b) in:: 
+        On = 'A'
 
-	X[['A','B']]
+the resulting tabarray will have one record for each unique value of a in 
+X['A'], while if On = ['A', 'B'] then the resulting tabarray will have 
+one record for each unique (a, b) pair in X[['A', 'B']]
 
-The `AggFuncDict` argument specifies how to aggregate the factors _not_ listed in `On`, e.g. the so-called `Off` columns. For example, if::
+The `AggFunc` argument is a function that specifies how to aggregate the 
+factors _not_ listed in `On`, e.g. the so-called `Off` columns.  For 
+example.  For instance, if On = ['A', 'B'] and `C` is a third column, then ::
 
-	On = ['A','B'] 
-	
-and *C* is some other column, then:: 
+        AggFunc = numpy.mean
 
-	AggFuncDict['C'] 
-	
-is the function that will be used to reduce to a single value the 
-(potentially multiple) values in the `C` column corresponding 
-to unique values in the `A`, `B` columns.   For instance, if::
+will result in a tabarray containing a `C` column whose values are the 
+average of the values from the original `C` columns corresponding to each 
+unique (a, b) pair. 
 
-	AggFuncDict['C'] = numpy.mean
+If you want to specify a different aggreagtion method for each `Off` column,
+use `AggFuncDict` instead of AggFunc.  `AggFuncDict` is a dictionary of
+functions whose keys are column names.  AggFuncDict[C] will be applied to 
+the C column, AggFuncDict[D] to the D column, etc.   AggFunc and AggFuncDict
+can be used simultaneously, with the elements of AggFuncDict overriding 
+AggFunc for the specified columns. 
 
-then the result will be that the values in the `C` column 
-corresponding to a single `A`, `B` value will be averaged.  
+Using either AggFunc or AggFuncDict, the resulting tabarray has the same 
+columns as the original tabarray.  Sometimes you want to specify the ability
+to create new aggregate columns not corresponding to one specific column in the 
+original tabarray, and taking data from several.  To achieve this, use the
+AggList argument.   AggList is a list of three-element lists of the form:
+     (name, func, col_names)
+where `name` specifies the resulting column name in the aggregated tabarray,
+`func` specifies the aggregation function, and `col_names` specifies the 
+list of columns names from the original tabarray that will be needed to 
+compute the aggregate values.  (That is, for each unique tuple `t` in the `On` 
+columns, the subarray of X[col_names] for which X[On] == t is passed to 
+`func`.)
+
+
 
 If an `Off` column is _not_ provided as a key in `AggFuncDict`, 
 a default aggregator function will be used:  the sum function 
@@ -769,7 +784,9 @@ More generally, the basic syntax for using `join` is::
 where `ToMerge` is a list (or dictionary) of tabular arrays to merge with `X`, and `keycols` is a list of the names of the key columns along which to do the merging.    There are a few restrictions to make the join work:
 
 * each element of `keycol` must be a valid column name in `X` and each array in `ToMerge`, and all of the same data-type.
-* for each column `col`  in `keycols`, and each array `A` in `ToMerge`, the values in `A[col]` must be unique, e.g. no repeats of values -- and same for `X[col]`.
+* for each column `col`  in `keycols`, and each array `A` in `ToMerge`, the values in `A[col]` must be unique, e.g. no repeats of values -- and same for `X[col]`.  (Actually this uniqueness doesn't have to hold for the first tabarray
+        in L, that is, L[0], but must for all the subsequent ones.)
+        
 * the *non*-key-column column names in each of the arrays must be disjoint from each other -- or disjoint after a renaming (see below).
 
 An error will be thrown if these conditions are not met.
@@ -827,7 +844,6 @@ rec.array([('North', 'Education', 70.80529023970098, 33.89847350125865),
 To call this syntax as tabarray method, use the "selfname" argument to specify the name of the "self" array:
 
 >>> X1.join({'China':X2},keycols = ['Region','Sector'],selfname='US')
-
 
 
 You can override the default renaming scheme using the `renamer` keyword::

@@ -13,6 +13,16 @@ import shutil
 import compiler
 import re
 import tempfile
+from compiler.ast import (Stmt, 
+                          Tuple,
+                          Assign,
+                          AssName,
+                          Dict,
+                          Const,
+                          List,
+                          Discard,
+                          Name)
+
 
 import numpy as np
 from numpy import int64
@@ -1204,11 +1214,13 @@ def inferheader(lines,comments=None,metadata=None,verbosity=DEFAULT_VERBOSITY):
             
         **metadata** : metadata dictionary, optional
         
-            used to deterine a comments character and metametadata dicationary, if present, 
+            used to deterine a comments character and metametadata dicationary, 
+            if present.
 
     **Returns**
     
-        Integer, representing the number of (inferred) header lines at the top of the file
+        Integer, representing the number of (inferred) header lines at the top 
+        of the file
     
     """
      
@@ -1248,11 +1260,13 @@ def inferheader(lines,comments=None,metadata=None,verbosity=DEFAULT_VERBOSITY):
                 return j
            
 
+def isctype(x, t):
+    a = (isinstance(x, Const) and isinstance(x.value, t))
+    b = t == types.BooleanType and isinstance(x, Name) and \
+                     x.name in ['False', 'True']
+    c =  (t == types.NoneType and isinstance(x, Name) and x.name == 'None')
+    return a or b or c
 
-
-from compiler.ast import Stmt,Tuple,Assign,AssName,Dict,Const,List,Discard,Name
-
-isctype = lambda x,t : (isinstance(x,Const) and isinstance(x.value,t)) or (t == types.BooleanType and isinstance(x,Name) and x.name in ['False','True']) or (t == types.NoneType and isinstance(x,Name) and x.name == 'None')
 
 def IsMetaMetaDict(AST):
 
@@ -1393,7 +1407,8 @@ def getstringmetadata(X,metakeys,dialect):
     
    
     if hasattr(X,'metadata'):
-        otherkeys = set(X.metadata.keys()).difference(dialist + ['names','coloring','types','formats','dialect'])
+        otherkeys = set(X.metadata.keys()).difference(dialist + \
+                         ['names','coloring','types','formats','dialect'])
         for k in otherkeys:
             if k in X.metadata.keys():
                 metadata[k] = X.metadata[k] if is_string_like(X.metadata[k]) else repr(X.metadata[k])
