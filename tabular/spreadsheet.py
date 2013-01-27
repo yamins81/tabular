@@ -16,7 +16,7 @@ object, which is a subclass of the numpy ndarray.
 
 __all__ = ['aggregate', 'aggregate_in', 'pivot', 'addrecords', 'addcols', 
            'deletecols', 'renamecol', 'replace', 'colstack', 'rowstack', 
-           'join', 'strictjoin','DEFAULT_RENAMER']
+           'join', 'strictjoin', 'DEFAULT_RENAMER']
 
 import numpy as np
 import types
@@ -25,7 +25,15 @@ import tabular.fast as fast
 from tabular.colors import GrayScale
 
 
-def aggregate(X, On=None, AggFuncDict=None, AggFunc=None,AggList = None,  returnsort=False,KeepOthers=True):
+def isftype(x):
+    a = lambda x : isinstance(x,types.FunctionType) 
+    b = isinstance(x,types.BuiltinFunctionType) 
+    c = isinstance(x,types.MethodType) 
+    d = isinstance(x,types.BuiltinMethodType)
+    return a or b or c or d
+
+def aggregate(X, On=None, AggFuncDict=None, AggFunc=None,
+              AggList=None, returnsort=False, KeepOthers=True):
     """
     Aggregate a ndarray with structured dtype (or recarray) on columns for 
     given functions.
@@ -40,31 +48,42 @@ def aggregate(X, On=None, AggFuncDict=None, AggFunc=None,AggList = None,  return
     The more factors listed in `On` argument, the "finer" is the aggregation, 
     the fewer factors, the "coarser" the aggregation.  For example, if::
 
-            On = ['A','B']
+            On = 'A'
 
-    the resulting data set will have one record for each unique value of pairs 
-    (a,b) in::
+    the resulting tabarray will have one record for each unique value of a in 
+    X['A'], while if On = ['A', 'B'] then the resulting tabarray will have 
+    one record for each unique (a, b) pair in X[['A', 'B']]
 
-            X[['A','B']]
+    The `AggFunc` argument is a function that specifies how to aggregate the 
+    factors _not_ listed in `On`, e.g. the so-called `Off` columns.  For 
+    example.  For instance, if On = ['A', 'B'] and `C` is a third column, then ::
 
-    The `AggFuncDict` argument specifies how to aggregate the factors _not_ 
-    listed in `On`, e.g. the so-called `Off` columns.  For example, if
+            AggFunc = numpy.mean
 
-            On = ['A','B']
-
-    and `C` is some other column, then::
-
-            AggFuncDict['C']
-
-    is the function that will be used to reduce to a single value the 
-    (potentially multiple) values in the `C` column corresponding to unique 
-    values in the `A`, `B` columns.  For instance, if::
-
-            AggFuncDict['C'] = numpy.mean
-
-    then the result will be that the values in the `C` column corresponding to 
-    a single `A`, `B` value will be averaged.
-
+    will result in a tabarray containing a `C` column whose values are the 
+    average of the values from the original `C` columns corresponding to each 
+    unique (a, b) pair. 
+    
+    If you want to specify a different aggreagtion method for each `Off` column,
+    use `AggFuncDict` instead of AggFunc.  `AggFuncDict` is a dictionary of
+    functions whose keys are column names.  AggFuncDict[C] will be applied to 
+    the C column, AggFuncDict[D] to the D column, etc.   AggFunc and AggFuncDict
+    can be used simultaneously, with the elements of AggFuncDict overriding 
+    AggFunc for the specified columns. 
+    
+    Using either AggFunc or AggFuncDict, the resulting tabarray has the same 
+    columns as the original tabarray.  Sometimes you want to specify the ability
+    to create new aggregate columns not corresponding to one specific column in the 
+    original tabarray, and taking data from several.  To achieve this, use the
+    AggList argument.   AggList is a list of three-element lists of the form:
+         (name, func, col_names)
+    where `name` specifies the resulting column name in the aggregated tabarray,
+    `func` specifies the aggregation function, and `col_names` specifies the 
+    list of columns names from the original tabarray that will be needed to 
+    compute the aggregate values.  (That is, for each unique tuple `t` in the `On` 
+    columns, the subarray of X[col_names] for which X[On] == t is passed to 
+    `func`.)
+        
     If an `Off` column is _not_ provided as a key in `AggFuncDict`, a default 
     aggregator function will be used:  the sum function for numerical columns, 
     concatenation for string columns.
@@ -78,7 +97,7 @@ def aggregate(X, On=None, AggFuncDict=None, AggFunc=None,AggList = None,  return
 
                     The data set to aggregate.
 
-            **On** :  list of  strings, optional
+            **On** :  string or list of  strings, optional
 
                     List of column names in `X`.
 
@@ -102,6 +121,10 @@ def aggregate(X, On=None, AggFuncDict=None, AggFunc=None,AggList = None,  return
                     `On` or the keys of `AggFuncDict`, e.g. a "default"
                     aggregation function for the `Off` columns not explicitly
                     listed in `AggFuncDict`.
+                    
+            **AggFuncDict** :  list, optional
+
+                    List of tuples 
 
             **returnsort** :        Boolean, optional
 
@@ -167,33 +190,40 @@ def aggregate(X, On=None, AggFuncDict=None, AggFunc=None,AggList = None,  return
     if KeepOthers:
         AggList = [(x,) for x in X.dtype.names if x not in Names + On] + AggList
    
-    DefaultChoices = {'string':[],'sum':[],'first':[]}
-    isftype = lambda x : isinstance(x,types.FunctionType) or isinstance(x,types.BuiltinFunctionType) or isinstance(x,types.MethodType) or isinstance(x,types.BuiltinMethodType)
+    DefaultChoices = {'string':[], 'sum':[], 'first':[]}
+
     for (i,v) in enumerate(AggList):
         if len(v) == 1:
             assert v[0] in X.dtype.names
             if AggFunc:
                 AggList[i] = v + (AggFunc,v[0])
             else:
-                AggList[i] = v + (DefaultChooser(X,v[0],DefaultChoices),v[0])
+                AggList[i] = v + (DefaultChooser(X,v[0], DefaultChoices),v[0])
         elif len(v) == 2:
             if isftype(v[1]):
                 assert v[0] in X.dtype.names
                 AggList[i] = v + (v[0],)
             elif utils.is_string_like(v[1]):
                 if AggFunc:
-                    assert v[1] in X.dtype.names or (isinstance(v[1],list) and set(v[1]) <= set(X.dtype.names))
-                    AggList[i] = (v[0],AggFunc,v[1])
+                    _a = v[1] in X.dtype.names
+                    _b = isinstance(v[1],list) and set(v[1]) <= set(X.dtype.names)
+                    assert _a or _b
+                    AggList[i] = (v[0], AggFunc, v[1])
                 else:
                     assert v[1] in X.dtype.names
-                    AggList[i] = (v[0],DefaultChooser(X,v[1],DefaultChoices),v[1])
+                    AggList[i] = (v[0],
+                                  DefaultChooser(X,v[1],
+                                  DefaultChoices),
+                                  v[1])
             else:
                 raise ValueError,'No specific of name for column.'
         elif len(v) == 3:
             if utils.is_string_like(v[2]):
                 assert isftype(v[1]) and v[2] in X.dtype.names
             else:
-                assert isftype(v[1]) and (isinstance(v[2],list) and set(v[2]) <= set(X.dtype.names))   
+                assert isftype(v[1]) and \
+                (isinstance(v[2],list) and \
+                set(v[2]) <= set(X.dtype.names))   
 
     if len(DefaultChoices['sum']) > 0:
         print('No aggregation function provided for', DefaultChoices['sum'], 
@@ -232,24 +262,33 @@ def strictaggregate(X,On,AggList,returnsort=False):
         else:
             [D,index_array] = fast.recarrayuniqify(X[On])
         X = X[index_array]
-        Diffs = np.append(np.append([-1],D[1:].nonzero()[0]),[len(D)])
+        Diffs = np.append(np.append([-1], D[1:].nonzero()[0]), [len(D)])
     else:
-        Diffs = np.array([-1,len(X)])
+        Diffs = np.array([-1, len(X)])
 
-    argcounts = dict([(o,f.func_code.co_argcount - (len(f.func_defaults) if f.func_defaults != None else 0) if 'func_code' in dir(f) else 1) for (o,f,g) in AggList])
+    argcounts = dict([(o,
+         f.func_code.co_argcount - (len(f.func_defaults) if \
+              f.func_defaults != None else 0) if 'func_code' in dir(f) else 1)
+                 for (o,f,g) in AggList])
 
-    OnCols = utils.fromarrays([X[o][Diffs[:-1]+1] for o in On], type=np.ndarray,names=On)
+    OnCols = utils.fromarrays([X[o][Diffs[:-1]+1] for o in On], 
+            type=np.ndarray, names=On)
     
-    AggColDict = dict([(o,[f(X[g][Diffs[i]+1:Diffs[i+1]+1]) if argcounts[o] == 1 else f(X[g][Diffs[i]+1:Diffs[i+1]+1],X) for i in range(len(Diffs) - 1)]) for (o,f,g) in AggList])
+    AggColDict = dict([(o,
+        [f(X[g][Diffs[i]+1:Diffs[i+1]+1]) if argcounts[o] == 1 else \
+        f(X[g][Diffs[i]+1:Diffs[i+1]+1],X) for i in range(len(Diffs) - 1)]) \
+        for (o,f,g) in AggList])
     
-    if isinstance(AggColDict[AggList[0][0]][0],list) or isinstance(AggColDict[AggList[0][0]][0],np.ndarray):
+    if isinstance(AggColDict[AggList[0][0]][0],list) or \
+    isinstance(AggColDict[AggList[0][0]][0],np.ndarray):
         lens = map(len, AggColDict[AggList[0][0]])
         OnCols = OnCols.repeat(lens)
         for o in AggColDict.keys():
             AggColDict[o] = utils.listunion(AggColDict[o])
    
     Names = [v[0] for v in AggList]
-    AggCols = utils.fromarrays([AggColDict[o] for o in Names], type=np.ndarray,names=Names)
+    AggCols = utils.fromarrays([AggColDict[o] for o in Names], 
+           type=np.ndarray, names=Names)
     
     if returnsort:
         return [colstack([OnCols,AggCols]),index_array]
@@ -257,8 +296,8 @@ def strictaggregate(X,On,AggList,returnsort=False):
         return colstack([OnCols,AggCols])
 
 
-def aggregate_in(Data, On=None, AggFuncDict=None, AggFunc=None, AggList = None,
-                 interspersed=True):
+def aggregate_in(Data, On=None, AggFuncDict=None, AggFunc=None, AggList=None,
+                  interspersed=True):
     """
     Aggregate a ndarray with structured dtype or recarray
     and include original data in the result.
@@ -372,11 +411,12 @@ def aggregate_in(Data, On=None, AggFuncDict=None, AggFunc=None, AggList = None,
     if On == None:
         On = []
 
-    NewAggregates = aggregate(X, On, AggFuncDict=AggFuncDict, AggFunc=AggFunc,AggList=AggList,KeepOthers=True)
+    NewAggregates = aggregate(X, On, AggFuncDict=AggFuncDict, 
+                AggFunc=AggFunc, AggList=AggList, KeepOthers=True)
     on = ','.join(On)
     NewAggregates = addcols(NewAggregates,   
-                            utils.fromarrays([[on]*len(NewAggregates)], type=np.ndarray,
-                                                                      names=['__aggregates__']))
+                            utils.fromarrays([[on]*len(NewAggregates)], 
+                            type=np.ndarray, names=['__aggregates__']))
     AggVars = utils.uniqify(AggVars + On)
     Aggregates = rowstack([OldAggregates,NewAggregates],mode='nulls')
 
@@ -384,7 +424,8 @@ def aggregate_in(Data, On=None, AggFuncDict=None, AggFunc=None, AggList = None,
     U = np.array(utils.uniqify(ANLen)); U.sort()
     [A,B] = fast.equalspairs(ANLen,U)
     Grays = np.array(grayspec(len(U)))
-    AggColor = utils.fromarrays([Grays[A]],type=np.ndarray, names = ['__color__'])
+    AggColor = utils.fromarrays([Grays[A]], type=np.ndarray, 
+           names = ['__color__'])
 
     Aggregates = addcols(Aggregates,AggColor)
 
@@ -567,10 +608,15 @@ def pivot(X, a, b, Keep=None, NullVals=None, order = None, prefix='_'):
             n1 = b ; f1 = unique_b; n2 = a ; f2 = unique_a
             
         dtype = np.dtype([(n1,f1.dtype.descr[0][1]),(n2,f2.dtype.descr[0][1])])
-        allvalues = utils.fromarrays([np.repeat(f1,len(f2)),np.tile(f2,len(f1))],np.ndarray,dtype=dtype)
+        allvalues = utils.fromarrays([np.repeat(f1,
+              len(f2)),
+              np.tile(f2,len(f1))],
+              np.ndarray,
+              dtype=dtype)
         
         
-        missingvalues = allvalues[np.invert(fast.recarrayisin(allvalues,X[[a,b]]))]
+        missingvalues = allvalues[np.invert(fast.recarrayisin(allvalues,
+                                      X[[a,b]]))]
 
         if NullVals == None:
            NullVals = {}
@@ -582,12 +628,13 @@ def pivot(X, a, b, Keep=None, NullVals=None, order = None, prefix='_'):
                 NullVals = dict([(o,NullVals) for o in othernames])
 
         nullvals = utils.fromrecords([[NullVals[o] if o in NullVals.keys() 
-                                        else utils.DEFAULT_NULLVALUE(X[o][0]) for o in 
-                                        othernames]], type=np.ndarray, names=othernames)
+                            else utils.DEFAULT_NULLVALUE(X[o][0]) for o in 
+                            othernames]], type=np.ndarray, names=othernames)
         
         nullarray = nullvals.repeat(len(missingvalues))
         Y = colstack([missingvalues, nullarray])
-        Y = Y.astype(np.dtype([(o,X.dtype[o].descr[0][1]) for o in Y.dtype.names]))
+        Y = Y.astype(np.dtype([(o,
+                  X.dtype[o].descr[0][1]) for o in Y.dtype.names]))
         X = rowstack([X, Y])
 
     X.sort(order = [a,b])
@@ -677,7 +724,8 @@ def addrecords(X, new):
     if isinstance(new, np.record) or isinstance(new, np.void) or \
                                                         isinstance(new, tuple):
         new = [new]
-    return np.append(X, utils.fromrecords(new, type=np.ndarray,dtype=X.dtype), axis=0)
+    return np.append(X, utils.fromrecords(new, type=np.ndarray,
+                                              dtype=X.dtype), axis=0)
 
 
 def addcols(X, cols, names=None):
@@ -718,7 +766,8 @@ def addcols(X, cols, names=None):
         names = [n.strip() for n in names.split(',')]
 
     if isinstance(cols, list):
-        if any([isinstance(x,np.ndarray) or isinstance(x,list) or isinstance(x,tuple) for x in cols]):
+        if any([isinstance(x,np.ndarray) or isinstance(x,list) or \
+                                     isinstance(x,tuple) for x in cols]):
             assert all([len(x) == len(X) for x in cols]), \
                    'Trying to add columns of wrong length.'
             assert names != None and len(cols) == len(names), \
@@ -980,7 +1029,8 @@ def rowstack(seq, mode='nulls', nullvals=None):
                      if all([x in l.dtype.names for l in seq[1:]])]
             formats = [max([a.dtype[att] for a in seq]).str for att in names]
             return utils.fromrecords(utils.listunion(
-                    [ar.tolist() for ar in seq]), type=np.ndarray,names=names, formats=formats)
+                    [ar.tolist() for ar in seq]), type=np.ndarray,
+                          names=names, formats=formats)
     else:
         return seq[0]
 
@@ -1050,7 +1100,9 @@ def colstack(seq, mode='abort',returnnaming=False):
             Names = [(L[0], x,x) for (x, L) in NameList if x not in Commons]
         elif mode == 'rename':
             NameDict = dict(NameList)
-            Names = utils.listunion([[(i,n,n) if len(NameDict[n]) == 1 else (i,n,n + '_' + str(i)) for n in s.dtype.names] for (i,s) in enumerate(seq)])                           
+            Names = utils.listunion([[(i,n,n) if len(NameDict[n]) == 1 else \
+               (i,n,n + '_' + str(i)) for n in s.dtype.names] \
+                                   for (i,s) in enumerate(seq)])                           
     else:
         Names = [(L[0], x,x) for (x, L) in NameList]
     
@@ -1081,8 +1133,9 @@ def join(L, keycols=None, nullvals=None, renamer=None,
         and each array in `L`, and all of the same data-type.
 
     *   for each column `col`  in `keycols`, and each array `A` in `L`, the 
-        values in `A[col]` must be unique, e.g. no repeats of values -- and 
-        same for `X[col]`.
+        values in `A[col]` must be unique, -- and same for `X[col]`.  
+        (Actually this uniqueness doesn't have to hold for the first tabarray
+        in L, that is, L[0], but must for all the subsequent ones.)
 
     *   the *non*-key-column column names in each of the arrays must be 
         disjoint from each other -- or disjoint after a renaming (see below).
@@ -1192,7 +1245,7 @@ def join(L, keycols=None, nullvals=None, renamer=None,
 
     """
 
-    if isinstance(L,dict):
+    if isinstance(L, dict):
         Names = L.keys()
         LL = L.values()
     else:
@@ -1269,7 +1322,8 @@ def strictjoin(L, keycols, nullvals=None, renaming=None, Names=None):
 
     *   for each column `col`  in `keycols`, and each array `A` in `L`, the 
         values in `A[col]` must be unique, e.g. no repeats of values -- and 
-        same for `X[col]`.
+        same for `X[col]`.  (Actually, the uniqueness criterion need not hold
+        to the first tabarray in L, but first for all the subsequent ones.)
 
     *   the *non*-key-column column names in each of the arrays must be 
         disjoint from each other -- or disjoint after a renaming (see below).
@@ -1400,7 +1454,8 @@ def strictjoin(L, keycols, nullvals=None, renaming=None, Names=None):
                     'appear in more than on array being merged:', str(commons))
 
     Result = colstack([(L[Names[0]][keycols])[0:0]] + 
-                      [deletecols(L[k][0:0], keycols) for k in Names if deletecols(L[k][0:0], keycols) != None])
+                      [deletecols(L[k][0:0], keycols) \
+                      for k in Names if deletecols(L[k][0:0], keycols) != None])
 
     PL = powerlist(Names)
     ToGet = utils.listunion([[p for p in PL if len(p) == k] 
@@ -1419,11 +1474,14 @@ def strictjoin(L, keycols, nullvals=None, renaming=None, Names=None):
             D = [fast.recarrayisin(L[j][keycols], Ref, weak=True) for j in I]
             
             Ref0 = L[I[0]][keycols][D[0]]
-            Reps0 = np.append(np.append([-1],(Ref0[1:] != Ref0[:-1]).nonzero()[0]),[len(Ref0)-1])
+            Reps0 = np.append(np.append([-1],
+                (Ref0[1:] != Ref0[:-1]).nonzero()[0]),[len(Ref0)-1])
             Reps0 = Reps0[1:] - Reps0[:-1]
                         
             NewRows = colstack([Ref0] + 
-                  [deletecols(L[j][D[i]], keycols).repeat(Reps0) if i > 0 else deletecols(L[j][D[i]], keycols) for (i, j) in enumerate(I) if deletecols(L[j][D[i]], keycols) != None])
+                  [deletecols(L[j][D[i]], keycols).repeat(Reps0) if i > 0 else 
+                   deletecols(L[j][D[i]], keycols) for (i, j) in enumerate(I)  
+                   if deletecols(L[j][D[i]], keycols) != None])
             for (i,j) in enumerate(I):
                 L[j] = L[j][np.invert(D[i])]
             Result = rowstack([Result, NewRows], mode='nulls', 
@@ -1431,8 +1489,9 @@ def strictjoin(L, keycols, nullvals=None, renaming=None, Names=None):
 
     return Result
 
+
 def RenamingIsInCorrectFormat(renaming, L, Names=None):
-    if isinstance(L,dict):
+    if isinstance(L, dict):
         Names = L.keys()
         LL = L.values()
     else:
@@ -1447,6 +1506,7 @@ def RenamingIsInCorrectFormat(renaming, L, Names=None):
            all([isinstance(renaming[k],dict) and
                 set(renaming[k].keys()) <= 
                 set(LL[Names.index(k)].dtype.names) for k in renaming.keys()])
+
 
 def DEFAULT_RENAMER(L, Names=None):
     """
@@ -1501,12 +1561,14 @@ def DEFAULT_RENAMER(L, Names=None):
 
     return D
 
+
 def Commons(ListOfLists):
     commons = []
     for i in range(len(ListOfLists)):
-        for j in range(i+1,len(ListOfLists)):
+        for j in range(i+1, len(ListOfLists)):
             commons.extend([l for l in ListOfLists[i] if l in ListOfLists[j]])
     return commons
+
 
 def powerlist(S):
     if len(S) > 0:
@@ -1514,6 +1576,7 @@ def powerlist(S):
         return Sp + [x + [S[-1]] for x in Sp]
     else:
         return [[]]
+
 
 def isunique(col):
     [D,s] = fast.recarrayuniqify(col)

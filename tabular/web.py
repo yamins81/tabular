@@ -21,7 +21,8 @@ __all__ = ['tabular2html']
 
 def tabular2html(fname=None, X=None, fin=None, title=None, printheader=False, 
                  split=True, usecss=None, writecss=None, SERVERNAME=None, 
-                 SERVER_FROM_CURDIR='../', ROWS_PER_PAGE=1000, returnstring = False, **kwargs):
+                 SERVER_FROM_CURDIR='../', ROWS_PER_PAGE=1000, 
+                 returnstring = False, **kwargs):
     """
     Creates an html representation of tabular data, either from a tabarray or 
     an externa file (`including ``.hsv``, ``.csv``, ``.tsv``).  If no data is 
@@ -382,7 +383,9 @@ def EqualLevels(L, sdict):
     for i in range(len(L)):
         l1 = L[i]
         if l1 not in done:
-            LevelVals = sdict[l1][:]        # need to copy dictionary contents, otherwise LevelVals points to the dict!
+            # need to copy dictionary contents, 
+            # otherwise LevelVals points to the dict!
+            LevelVals = sdict[l1][:]        
             LevelKeys = [l1]
             done += [l1]
             for j in range(i, len(L)):
@@ -404,10 +407,8 @@ def MakeLine(names, L, sdict):
 
     for i in range(len(Diffs) - 1):
         if LN[Diffs[i] + 1] != '':
-            #s += '<td colspan = "' + str(Diffs[i + 1] - Diffs[i]) + '">' + (LN[Diffs[i] + 1] + '&nbsp &nbsp ')*(Diffs[i + 1] - Diffs[i] / 2) +  '</td>'
             s += ('<td colspan = "' + str(Diffs[i + 1] - Diffs[i]) + '">' + 
                   LN[Diffs[i] + 1]  +  '</td>')
-            #s +=  '<th>' + LN[Diffs[i] + 1] + '</th><th colspan="' + str(Diffs[i + 1] - Diffs[i] - 1) + '"><hr/></th>'
         else:
             s += '<th colspan = "' + str(Diffs[i + 1] - Diffs[i]) + '"></th>'
 
