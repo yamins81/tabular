@@ -1165,8 +1165,8 @@ def readstoredmetadata(fname, skiprows=0, linenumber=None, comments='#',
         if (max([v if isinstance(v,int) else max(v) 
                 for v in  metametadata.values()]) < len(data)):
             for n in metametadata.keys():
-                [s, e] = [metametadata[n], metametadata[n]+1] 
-                          if isinstance(metametadata[n],int) 
+                [s, e] = [metametadata[n], metametadata[n]+1] \
+                          if isinstance(metametadata[n],int) \
                           else [metametadata[n][0],metametadata[n][1]]
                 metadata[n] = ''.join(data[s:e]).strip('\n')
             processmetadata(metadata, comments=comments, verbosity=verbosity)
