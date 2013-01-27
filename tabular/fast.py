@@ -471,7 +471,8 @@ def arraymax(X,Y):
 
 def arraymin(X,Y):
     """
-    Fast "vectorized" min function for element-wise comparison of two numpy arrays.
+    Fast "vectorized" min function for element-wise comparison of two 
+    numpy arrays.
 
     For two numpy arrays `X` and `Y` of equal length,
     return numpy array `Z` such that::

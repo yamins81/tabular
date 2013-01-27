@@ -45,6 +45,7 @@ def uniqify(seq, idfun=None):
         result.append(item)
     return result
 
+
 def listunion(ListOfLists):
     """
     Take the union of a list of lists.
@@ -81,11 +82,13 @@ def listunion(ListOfLists):
             u.extend(s)
     return u
 
+
 def listintersection(ListOfLists):
     u = ListOfLists[0]
     for l in ListOfLists[1:]:
         u = [ll for ll in u if ll in l]
     return u
+
 
 def perminverse(s):
     '''
@@ -107,6 +110,7 @@ def perminverse(s):
     X = np.array(range(len(s)))
     X[s] = range(len(s))
     return X
+    
     
 def is_string_like(obj):
     """
@@ -133,6 +137,7 @@ def is_string_like(obj):
         return False
     return True
 
+
 def listarraytranspose(L):
     '''
     Tranposes the simple array presentation of a list of lists (of equal length). 
@@ -144,15 +149,16 @@ def listarraytranspose(L):
     '''
     return [[row[i] for row in L] for i in range(len(L[0]))]
 
-def fromarrays(X,type=None,**kwargs):
+
+def fromarrays(X, type=None, **kwargs):
     if 'dtype' in kwargs.keys() and kwargs['dtype'] and 'object':
-        _array = dtypecolumnloader(X,**kwargs)    
+        _array = dtypecolumnloader(X, **kwargs)    
     else:
         try:
-            _array = np.rec.fromarrays(X,**kwargs)
+            _array = np.rec.fromarrays(X, **kwargs)
         except (TypeError,ValueError):
             if 'formats' in kwargs.keys() and kwargs['formats']:
-                _array = formatscolumnloader(X,**kwargs)
+                _array = formatscolumnloader(X, **kwargs)
             else:
                 traceback.print_exc()
                 raise ValueError
@@ -161,21 +167,23 @@ def fromarrays(X,type=None,**kwargs):
     return _array
    
    
-def fromrecords(X,type=None,**kwargs):
+def fromrecords(X, type=None, **kwargs):
     if 'dtype' in kwargs.keys() and kwargs['dtype']:
         _array = np.array(X,dtype=kwargs['dtype'])
     else:
         try:
-            _array = np.rec.fromrecords(X,**kwargs)
+            _array = np.rec.fromrecords(X, **kwargs)
         except (TypeError,ValueError):  
             
             if 'formats' in kwargs.keys() and kwargs['formats']:
                 formats = processformats(len(X[0]),kwargs['formats'])
                 if 'str' not in formats:
-                    dtype = getdtype(kwargs['names'] if 'names' in kwargs.keys() else None, formats)
+                    dtype = getdtype(kwargs['names'] 
+                          if 'names' in kwargs.keys() else None, formats)
                     _array = np.array(X,dtype=dtype)
                 else:
-                    _array = formatscolumnloader(listarraytranspose(X),**kwargs)
+                    _array = formatscolumnloader(listarraytranspose(X),
+                                   **kwargs)
             else:
                 traceback.print_exc()
                 raise ValueError 
@@ -187,16 +195,18 @@ def fromrecords(X,type=None,**kwargs):
 def fromkeypairs(kvpairs,dtype=None,fillingvalues=None):
 
     R = np.arange(len(kvpairs))
-    KVind = listunion([[(i,) + v for v in kvpairs[i]] for i in range(len(kvpairs))])
+    KVind = listunion([[(i,) + v for v in kvpairs[i]] \
+                               for i in range(len(kvpairs))])
     maxkeyl = max([len(v[1]) for v in KVind]) ; strt = '|S' + str(maxkeyl)
-    X = np.array(KVind,dtype = np.dtype([('Row','int'),('Key',strt),('Value','object')]))
+    X = np.array(KVind, dtype = np.dtype([('Row', 'int'),
+                                      ('Key', strt), ('Value', 'object')]))
     names = uniqify(X['Key'])
     
     fvd = processvfd(fillingvalues,names = names)
          
     realcols = []  ; realtypes = []
     new_version = np.version.short_version >= '1.4.0'
-    for (i,n) in enumerate(names):
+    for (i, n) in enumerate(names):
         Xn = X[X['Key'] == n][['Row','Value']]
 
         MissingRows = np.invert(fast.isin(R,Xn['Row'])).nonzero()[0]       
@@ -211,7 +221,8 @@ def fromkeypairs(kvpairs,dtype=None,fillingvalues=None):
             Xnv = np.array(Xn['Value'].tolist())
         realtype = Xnv.dtype.descr[0][1]
         realtypes.append(realtype)
-        fillval = DEFAULT_NULLVALUEFORMAT(realtype) if fvd[i] is None else fvd[i](Xnv) if hasattr(fvd[i],'__call__') else fvd[i]
+        fillval = DEFAULT_NULLVALUEFORMAT(realtype) if fvd[i] is None \
+               else (fvd[i](Xnv) if hasattr(fvd[i], '__call__') else fvd[i])
         MissingVals = len(MissingRows)*[fillval]      
         Xnv = np.append(Xnv,MissingVals)
         	
@@ -224,17 +235,19 @@ def fromkeypairs(kvpairs,dtype=None,fillingvalues=None):
     return fromarrays(realcols,dtype=dtype)
     
 
-def processvfd(fillingvalues,numbers=None,names=None):
-
+def processvfd(fillingvalues, numbers=None, names=None):
     if (numbers or names):
         if not numbers:
             numbers = range(len(names))
         if fillingvalues:    
-            if isinstance(fillingvalues,list) or isinstance(fillingvalues,tuple):
-                 vfd = dict([(n,fillingvalues[i]) for (i,n) in enumerate(numbers)])
+            if isinstance(fillingvalues,list) or \
+                           isinstance(fillingvalues,tuple):
+               vfd = dict([(n,
+                     fillingvalues[i]) for (i,n) in enumerate(numbers)])
             elif isinstance(fillingvalues,dict):
                 intkeys = [k for k in fillingvalues.keys() if isinstance(k,int)]
-                vfd = dict([(k,v) for (k,v) in fillingvalues.items() if k in intkeys])
+                vfd = dict([(k, v) for (k, v) in fillingvalues.items() 
+                                 if k in intkeys])
                 strkeys = [k for k in fillingvalues.keys() if isinstance(k,str)]            
                 if len(strkeys) > 0:
                     namedict = dict([(names[j],j) for j in numbers])
@@ -244,17 +257,18 @@ def processvfd(fillingvalues,numbers=None,names=None):
                     if k not in vfd.keys():
                         vfd[k] = None
             else:
-                vfd = dict([(j,fillingvalues) for j in numbers])    
+                vfd = dict([(j, fillingvalues) for j in numbers])    
         else:
-            vfd = dict([(j,None) for j in numbers])
+            vfd = dict([(j, None) for j in numbers])
     else:
         vfd = {} 
     return vfd
 
+
 def livetyper(X):
     t = max([type(x) for x in X])
     if t.__name__ == 'str':
-        L = max(max([len(x) for x in X]),1)
+        L = max(max([len(x) for x in X]), 1)
         return '|S' + str(L)
     else:
         return np.dtype(t.__name__).descr[0][1]
@@ -294,6 +308,7 @@ def DEFAULT_NULLVALUEFORMAT(format):
            
 def DEFAULT_FILLVAL(format):
     return np.nan if format.startswith(('<i','|b','<f')) else ''
+
 
 def DEFAULT_TYPEINFERER(column):
     """
@@ -339,9 +354,16 @@ def DEFAULT_TYPEINFERER(column):
         except:
             return np.array(column, 'str')
 
+
 DEFAULT_STRINGMISSINGVAL = ''
 
-DEFAULT_STRINGIFIER = lambda D : D if D.dtype.name.startswith('str') else str(D.tolist()).strip('[]').replace('nan','').split(', ') 
+
+def DEFAULT_STRINGIFIER(D):
+    if D.dtype.name.startswith('str'):
+        return D
+    else:
+        return str(D.tolist()).strip('[]').replace('nan', '').split(', ') 
+
 
 def DEFAULT_NULLVALUE(test):
     """
@@ -371,32 +393,37 @@ def DEFAULT_NULLVALUE(test):
            else ''
 
 
-def dtypecolumnloader(X,**kwargs):
+def dtypecolumnloader(X, **kwargs):
     kk = kwargs.copy()
     dtype = kk['dtype']
-    assert len(dtype) == len(X),'wrong dtypelength'
-    return np.rec.fromarrays([makearray(c,dtype[i]) for (i,c) in enumerate(X)],**kk)
+    assert len(dtype) == len(X), 'wrong dtypelength'
+    return np.rec.fromarrays([makearray(c,dtype[i]) 
+                               for (i, c) in enumerate(X)], **kk)
 
-def formatscolumnloader(X,**kwargs):
+
+def formatscolumnloader(X, **kwargs):
     kk = kwargs.copy()
     formats = kk['formats']
     kk.pop('formats')
-    formats = processformats(len(X),kwargs['formats'])
-    return np.rec.fromarrays([makearray(c,t) for (c,t) in zip(X,formats)],**kk)
+    formats = processformats(len(X), kwargs['formats'])
+    return np.rec.fromarrays([makearray(c, t)
+                               for (c, t) in zip(X, formats)], **kk)
 
-def makearray(c,t):
-    return np.array(c,t)
+
+def makearray(c, t):
+    return np.array(c, t)
 
     
-def processformats(L,formats):
+def processformats(L, formats):
     if is_string_like(formats):
         formats = formats.split(',')
     if not (len(formats) == 1 or len(formats) == L):
-        raise ValueError, 'Wrong number of formats (' + str(len(formats)) + ') for number of columns (' + str(L) + ')'
+        msg = 'Wrong number of formats (%d) for number of columns (%s)' % \
+                                           (len(formats), str(L))
+        raise ValueError, msg
     if len(formats) == 1:
         formats = formats*L
     return formats
 
-def getdtype(names,formats):
+def getdtype(names, formats):
     return np.dtype(zip(names,formats)) if names != None else np.dtype(formats)
-        

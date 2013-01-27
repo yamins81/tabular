@@ -13,6 +13,15 @@ import shutil
 import compiler
 import re
 import tempfile
+from compiler.ast import (Stmt, 
+                          Tuple,
+                          Assign,
+                          AssName,
+                          Dict,
+                          Const,
+                          List,
+                          Discard,
+                          Name)
 
 import numpy as np
 from numpy import int64
@@ -39,44 +48,44 @@ def loadSV(fname, shape=None, titles=None, aligned=False, byteorder=None,
 
     **Parameters**
 
-            **fname** :  string or file object
+        **fname** :  string or file object
 
-                    Path (or file object) corresponding to a separated variable
-                    (CSV) text file.
+            Path (or file object) corresponding to a separated variable
+            (CSV) text file.
 
-             **names** : list of strings
-                    
-                Sets the names of the columns of the resulting tabarray.   If 
-                not specified, `names` value is determined first by looking for 
-                metadata in the header of the file, and if that is not found, 
-                are assigned by NumPy's `f0, f1, ... fn` convention.  See 
-                **namesinheader** parameter below.
-                    
-            **formats** :  string or list of strings
+         **names** : list of strings
                 
-                Sets the datatypes of the columns.  The value of `formats` can 
-                be a list or comma-delimited string of values describing values 
-                for each column (e.g. "str,str,int,float" or 
-                ["str", "str", "int", "float"]), a single value to apply to all 
-                columns, or anything that can be used in numpy.rec.array 
-                constructor.   
-                    
-                If the **formats** (or **dtype**) parameter are not  specified, 
-                typing is done by inference.  See **typer** parameter below.  
-                                        
-            **dtype** : numpy dtype object
-                 
-                Sets the numpy dtype of the resulting tabarray, combining column 
-                format and column name information.  If dtype is set, any 
-                **names** and **formats** specifications will be overriden.  If 
-                the **dtype** (or **formats**) parameter are not  specified, 
-                typing is done by inference.  See **typer** parameter below.   
-  
-            The **names**, **formats** and **dtype** parameters duplicate 
-            parameters of the NumPy record array creation inferface.  Additional 
-            paramters of the NumPy inferface that are passed through are 
-            **shape**, **titles**, **byteorder** and **aligned** (see NumPy 
-            documentation for more information.)
+            Sets the names of the columns of the resulting tabarray.   If 
+            not specified, `names` value is determined first by looking for 
+            metadata in the header of the file, and if that is not found, 
+            are assigned by NumPy's `f0, f1, ... fn` convention.  See 
+            **namesinheader** parameter below.
+                
+        **formats** :  string or list of strings
+            
+            Sets the datatypes of the columns.  The value of `formats` can 
+            be a list or comma-delimited string of values describing values 
+            for each column (e.g. "str,str,int,float" or 
+            ["str", "str", "int", "float"]), a single value to apply to all 
+            columns, or anything that can be used in numpy.rec.array 
+            constructor.   
+                
+            If the **formats** (or **dtype**) parameter are not  specified, 
+            typing is done by inference.  See **typer** parameter below.  
+                                    
+        **dtype** : numpy dtype object
+             
+            Sets the numpy dtype of the resulting tabarray, combining column 
+            format and column name information.  If dtype is set, any 
+            **names** and **formats** specifications will be overriden.  If 
+            the **dtype** (or **formats**) parameter are not  specified, 
+            typing is done by inference.  See **typer** parameter below.   
+
+        The **names**, **formats** and **dtype** parameters duplicate 
+        parameters of the NumPy record array creation inferface.  Additional 
+        paramters of the NumPy inferface that are passed through are 
+        **shape**, **titles**, **byteorder** and **aligned** (see NumPy 
+        documentation for more information.)
 
     **kwargs**: keyword argument dictionary of variable length
 
@@ -91,14 +100,13 @@ def loadSV(fname, shape=None, titles=None, aligned=False, byteorder=None,
 
     **Returns**
 
-            **R** :  numpy record array
+        **R** :  numpy record array
 
-                    record array constructed from data in the SV file
+            Record array constructed from data in the SV file
 
-            **metadata** :  dictionary
+        **metadata** :  dictionary
 
-                    Metadata read and constructed during process of reading 
-                    file.
+            Metadata read and constructed during process of reading file.
 
     **See Also:**
 
@@ -158,112 +166,111 @@ def loadSVcols(fname, usecols=None, excludecols=None, valuefixer=None,
 
     **Parameters**
 
-            **fname** :  string or file object
+        **fname** :  string or file object
 
-                    Path (or file object) corresponding to a separated variable
-                    (CSV) text file.
+            Path (or file object) corresponding to a separated variable (CSV) 
+            text file.
                     
-            **usecols** :  sequence of non-negative integers or strings, optional
+        **usecols** :  sequence of non-negative integers or strings, optional
 
-                Only the columns in *usecols* are loaded and processed.  Columns 
-                can be described by number, with 0 being the first column; or if 
-                name metadata is present, then by name; or, if color group 
-                information is present in the file, then by color group name.   
-                Default is None, e.g. all columns are loaded.
+            Only the columns in *usecols* are loaded and processed.  Columns can 
+            be described by number, with 0 being the first column; or if name 
+            metadata is present, then by name; or, if color group information is 
+            present in the file, then by color group name.  Default is None, 
+            e.g. all columns are loaded.
  
-            **excludecols** :  sequence of non-negative integers or strings, optional
+        **excludecols** :  sequence of non-negative integers or strings, optional
 
-                Converse of **usecols**, e.g. all columns EXCEPT those listed 
-                will be loaded. 
+            Converse of **usecols**, e.g. all columns EXCEPT those listed 
+            will be loaded. 
             
-            **valuefixer**  :  callable, or list or dictionary of callables, optional
+        **valuefixer**  :  callable, or list or dictionary of callables, optional
     
-               These callable(s) are applied to every value in each field.  The 
-               application is done after line strings are loaded and split into 
-               fields, but before any typing or missing-value imputation is 
-               done.  The purpose of the **valuefixer** is to prepare column 
-               values for typing and imputation.  The valuefixer callable can 
-               return a string or a python object.  If `valuefixer` is a single 
-               callable, then that same callable is applied to values in all 
-               column; if it is a dictionary, then the keys can be either 
-               numbers or names and the value for the key will be applied to 
-               values in the corresponding column with that name or number; if 
-               it is a list, then the list elements must be in 1-to-1 
-               correspondence with the loaded columns, and are applied to each 
-               respectively.
+            These callable(s) are applied to every value in each field.  The 
+            application is done after line strings are loaded and split into 
+            fields, but before any typing or missing-value imputation is done.  
+            The purpose of the **valuefixer** is to prepare column 
+            values for typing and imputation.  The valuefixer callable can 
+            return a string or a python object.  If `valuefixer` is a single 
+            callable, then that same callable is applied to values in all 
+            column; if it is a dictionary, then the keys can be either 
+            numbers or names and the value for the key will be applied to 
+            values in the corresponding column with that name or number; if 
+            it is a list, then the list elements must be in 1-to-1 
+            correspondence with the loaded columns, and are applied to each 
+            respectively.
                
-            **colfixer** : callable, or list or dictionary of callables, optional
-    
-                Same as **valuefixer**, but instead of being applied to 
-                individual values, are applied to whole columns (and must return 
-                columns or numpy arrays of identical length).  Like valuefixer, 
-                colfixer callable(s) are applied before typing and missing-value 
-                imputation.  
+        **colfixer** : callable, or list or dictionary of callables, optional
+
+            Same as **valuefixer**, but instead of being applied to 
+            individual values, are applied to whole columns (and must return 
+            columns or numpy arrays of identical length).  Like valuefixer, 
+            colfixer callable(s) are applied before typing and missing-value 
+            imputation.  
                 
-            **missingvalues** : string, callable returning string, or list or dictionary of strings or string-valued callable
+        **missingvalues** : string, callable returning string, or list or dictionary of strings or string-valued callable
             
-                String value(s) to consider as "missing data" and to be replaced 
-                before typing is done.   If specified as a callable, the 
-                callable will be applied to the column(s) to determine missing 
-                value.  If specified as a dictionary, keys are expected to be 
-                numbers of names of columns, and values are individual missing 
-                values for those columns (like **valuefixer** inferface).                   
+            String value(s) to consider as "missing data" and to be replaced 
+            before typing is done.   If specified as a callable, the 
+            callable will be applied to the column(s) to determine missing 
+            value.  If specified as a dictionary, keys are expected to be 
+            numbers of names of columns, and values are individual missing 
+            values for those columns (like **valuefixer** inferface).                   
                 
-            **fillingvalues** : string, pair of strings, callable returning string, or list or dictionary of strings or string-valued callable
+        **fillingvalues** : string, pair of strings, callable returning string, or list or dictionary of strings or string-valued callable
             
-                Values to be used to replace missing data before typing is done.   
-                If specified as a  single non-callable, non-tuple value, this 
-                value is used to replace all missing data.  If specified as a 
-                callable, the callable is applied to the column and returns the 
-                fill value (e.g. to allow the value to depend on the column 
-                type).  If specified as a pair of values, the first value acts 
-                as the missing value and the second as the value to replace 
-                with.  If a dictionary or list of values, then values are 
-                applied to corresponding columns.  
+            Values to be used to replace missing data before typing is done.   
+            If specified as a  single non-callable, non-tuple value, this 
+            value is used to replace all missing data.  If specified as a 
+            callable, the callable is applied to the column and returns the 
+            fill value (e.g. to allow the value to depend on the column 
+            type).  If specified as a pair of values, the first value acts 
+            as the missing value and the second as the value to replace 
+            with.  If a dictionary or list of values, then values are 
+            applied to corresponding columns.  
     
-            NOTE:  all the **missingvalues** and **fillingvalues** 
-            functionalities can be replicated (and generalized) using the 
-            **valuefixer** or **colfixer** parameters, by specifying function(s) 
-            which identify and replace missing values.  While more limited, 
-            using **missingvalues** and **fillingvalues**  interface is easier 
-            and gives better performance.   
+        NOTE:  all the **missingvalues** and **fillingvalues** 
+        functionalities can be replicated (and generalized) using the 
+        **valuefixer** or **colfixer** parameters, by specifying function(s) 
+        which identify and replace missing values.  While more limited, 
+        using **missingvalues** and **fillingvalues**  interface is easier 
+        and gives better performance.   
     
-            **typer** : callable taking python list of strings (or other values) 
-            and returning 1-d numpy array; or list dictionary of such callables  
+        **typer** : callable taking python list of strings (or other values) 
+        and returning 1-d numpy array; or list dictionary of such callables  
             
-               Function used to infer type and convert string lists into typed 
-               numpy arrays, if no format information has been provided.  When 
-               applied at all, this function is applied after string have been 
-               loaded and split into fields.  This function is expected to 
-               impute missing values as well, and will override any setting of 
-               **missingvalues** or **fillingvalues**.  If a callable is passed,  
-               it is used as typer for all columns, while if a dictionary (or 
-               list) of callables is passed, they're used on corresponding 
-               columns.  If needed (e.g. because formatting information hasn't 
-               been supplied) but **typer** isn't specified (at least, for a 
-               given column), the constructor defaults to using the 
-               `utils.DEFAULT_TYPEINFERER` function.          
-                              
-            **kwargs**: keyword argument dictionary of variable length
-             
-                Contains various parameters to be passed on to loadSVrecs, 
-                including **skiprows**, **comments**, **delimiter**, 
-                **lineterminator**, **uselines**,  **metametadata**, 
-                **namesinheader**,**headerlines**, **linefixer**,  
-                **delimiter_regex**, **inflines**, **verbosity**, and various 
-                CSV module parameters like **escapechar**, **quoting**, 
-                **quotechar**, **doublequote**, **skipinitialspace**. 
+           Function used to infer type and convert string lists into typed 
+           numpy arrays, if no format information has been provided.  When 
+           applied at all, this function is applied after string have been 
+           loaded and split into fields.  This function is expected to 
+           impute missing values as well, and will override any setting of 
+           **missingvalues** or **fillingvalues**.  If a callable is passed,  
+           it is used as typer for all columns, while if a dictionary (or 
+           list) of callables is passed, they're used on corresponding 
+           columns.  If needed (e.g. because formatting information hasn't 
+           been supplied) but **typer** isn't specified (at least, for a 
+           given column), the constructor defaults to using the 
+           `utils.DEFAULT_TYPEINFERER` function.          
+                          
+        **kwargs**: keyword argument dictionary of variable length
+         
+            Contains various parameters to be passed on to loadSVrecs, 
+            including **skiprows**, **comments**, **delimiter**, 
+            **lineterminator**, **uselines**,  **metametadata**, 
+            **namesinheader**,**headerlines**, **linefixer**,  
+            **delimiter_regex**, **inflines**, **verbosity**, and various 
+            CSV module parameters like **escapechar**, **quoting**, 
+            **quotechar**, **doublequote**, **skipinitialspace**. 
             
     **Returns**
 
-            **columns** :  list of numpy arrays
+        **columns** :  list of numpy arrays
 
-                    List of arrays corresponding to columns of data.
+            List of arrays corresponding to columns of data.
 
-            **metadata** :  dictionary
+        **metadata** :  dictionary
 
-                    Metadata read and constructed during process of reading 
-                    file.
+            Metadata read and constructed during process of reading file.
 
     **See Also:**
 
@@ -706,86 +713,87 @@ def saveSV(fname, X, comments=None, metadata=None, printmetadict=None,
 
     **Parameters**
 
-            **fname** :  string
+        **fname** :  string
 
-                Path to a separated variable (CSV) text file.
+            Path to a separated variable (CSV) text file.
 
-            **X** :  tabarray
+        **X** :  tabarray
 
-                The actual data in a :class:`tabular.tab.tabarray`.
+            The actual data in a :class:`tabular.tab.tabarray`.
 
-            **comments** :  string, optional
+        **comments** :  string, optional
 
-                The character to be used to denote the start of a header 
-                (non-data) line, e.g. '#'.  If not specified, it is determined 
-                according to the following rule:  '#' if `metadata` argument is 
-                set, otherwise ''.
+            The character to be used to denote the start of a header (non-data) 
+            line, e.g. '#'.  If not specified, it is determined according to the 
+            following rule:  '#' if `metadata` argument is set, otherwise ''.
 
-            **delimiter** :  string, optional
+        **delimiter** :  string, optional
 
-                The character to beused to separate values in each line of text, 
-                e.g. ','.  If not specified, by default, this is inferred from 
-                the file extension: if the file ends in `.csv`, the delimiter is 
-                ',', otherwise it is '\\t.'
+            The character to beused to separate values in each line of text, 
+            e.g. ','.  If not specified, by default, this is inferred from 
+            the file extension: if the file ends in `.csv`, the delimiter is 
+            ',', otherwise it is '\\t.'
 
-            **linebreak** :  string, optional
+        **linebreak** :  string, optional
 
-                The string separating lines of text.  By default, this is 
-                assumed to be '\\n', and can also be set to be '\\r' or 
-                '\\r\\n'.
+            The string separating lines of text.  By default, this is assumed to 
+            be '\\n', and can also be set to be '\\r' or '\\r\\n'.
 
-            **metadata** :  list of strings or Boolean, optional
+        **metadata** :  list of strings or Boolean, optional
 
-                Allowed values are True, False, or any sublists of the list 
-                `['names', 'formats', 'types', 'coloring', 'dialect']`.  These 
-                keys indicate what special metadata is printed in the header.
+            Allowed values are True, False, or any sublists of the list 
+            `['names', 'formats', 'types', 'coloring', 'dialect']`.  These 
+            keys indicate what special metadata is printed in the header.
 
-                * If a sublist of 
-                  `['names', 'formats', 'types', 'coloring', 'dialect']`, then 
-                  the indicated types of metadata are written out.  
+            * If a sublist of 
+             `['names', 'formats', 'types', 'coloring', 'dialect']`, then the 
+             indicated types of metadata are written out.  
 
-                * If `True`, this is the same as 
-                  `metadata = ['coloring', 'types', 'names','dialect']`, e.g. as 
-                  many types of metadata as this algorithm currently knows how 
-                  to write out. 
+            * If `True`, this is the same as 
+              `metadata = ['coloring', 'types', 'names','dialect']`, e.g. as 
+               many types of metadata as this algorithm currently knows how to 
+               write out. 
 
-                * If 'False', no metadata is printed at all, e.g. just the data.
+            * If 'False', no metadata is printed at all, e.g. just the data.
                     
-                * If `metadata` is not specified, the default is `['names']`, 
-                  that is, just column names are written out.
+            * If `metadata` is not specified, the default is `['names']`, that 
+              is, just column names are written out.
                         
-            **printmetadict** :  Boolean, optional
+        **printmetadict** :  Boolean, optional
 
-                Whether or not to print a string representation of the
-                `metadatadict` in the first line of the header.
+            Whether or not to print a string representation of the 
+            `metadatadict` in the first line of the header.
 
-                If `printmetadict` is not specified, then:
+            If `printmetadict` is not specified, then:
 
-                * If `metadata` is specified and is not `False`, then
-                  `printmetadata` defaults to `True`.
+            * If `metadata` is specified and is not `False`, then
+              `printmetadata` defaults to `True`.
 
-                * Else if `metadata` is `False`, then `printmetadata` defaults 
-                  to `False`.
+            * Else if `metadata` is `False`, then `printmetadata` defaults 
+              to `False`.
 
-                * Else `metadata` is not specified, and `printmetadata` defaults 
-                  to `False`.
+            * Else `metadata` is not specified, and `printmetadata` defaults 
+              to `False`.
 
-                See the :func:`tabular.io.loadSV` for more information about 
-                `metadatadict`.
+            See the :func:`tabular.io.loadSV` for more information about 
+            `metadatadict`.
             
-            **stringifier** : callable taking 1-d numpy array and returning Python list of strings of same length, or dictionary or tuple of such callables.  
+        **stringifier** : callable 
+        
+            Callable taking 1-d numpy array and returning Python list of strings 
+            of same length, or dictionary or tuple of such callables.  
                     
-                If specified, the callable will be applied to each column, and 
-                the resulting list of strings will be written to the file.  If 
-                specified as a list or dictionary of callables, the functions 
-                will be applied to correponding columns.  The default used if 
-                **stringifier** is not specified, is 
-                `tb.utils.DEFAULT_STRINGIFIER`, which merely passes through 
-                string-type columns, and converts numerical-type columns 
-                directly to correponding strings with NaNs replaced with blank 
-                values.  The main purpose of specifying a non-default value is 
-                to encode numerical values in various string encodings that 
-                might be used required for other applications like databases.                    
+            If specified, the callable will be applied to each column, and the 
+            resulting list of strings will be written to the file.  If 
+            specified as a list or dictionary of callables, the functions will 
+            be applied to correponding columns.  The default used if 
+            **stringifier** is not specified, is `tb.utils.DEFAULT_STRINGIFIER`, 
+            which merely passes through string-type columns, and converts 
+            numerical-type columns directly to corresponding strings with NaNs 
+            replaced with blank values.  The main purpose of specifying a 
+            non-default value is to encode numerical values in various string 
+            encodings that might be used required for other applications like 
+            databases.                    
                                
             NOTE:  In certain special circumstances (e.g. when the 
             lineterminator or delimiter character appears in a field of the 
@@ -1181,10 +1189,10 @@ def processmetadata(metadata, items=None, comments=None, delimiter_regex=None,
 
         **metadata** : dictionary
 
-             This argument is a dictionary whose keys are strings denoting
-             different kinds of metadata (e.g. "names" or "formats") and whose 
-             values are the metadata of that type.  The metadata dictionary is 
-             modified IN-PLACE by this function.
+            This argument is a dictionary whose keys are strings denoting
+            different kinds of metadata (e.g. "names" or "formats") and whose 
+            values are the metadata of that type.  The metadata dictionary is 
+            modified IN-PLACE by this function.
 
         **items** : string or list of strings, optional
 
@@ -1428,13 +1436,13 @@ def inferheader(lines, comments=None, metadata=None,
                 return j
            
 
-from compiler.ast import Stmt,Tuple,Assign,AssName,Dict,Const,List,Discard,Name
+def isctype(x, t):
+    a = (isinstance(x, Const) and isinstance(x.value, t))
+    b = t == types.BooleanType and isinstance(x, Name) and \
+                     x.name in ['False', 'True']
+    c =  (t == types.NoneType and isinstance(x, Name) and x.name == 'None')
+    return a or b or c
 
-isctype = lambda x,t : ((isinstance(x,Const) and isinstance(x.value,t)) or 
-                        ((t == types.BooleanType) and (isinstance(x,Name)) and 
-                         (x.name in ['False','True'])) or 
-                        ((t == types.NoneType) and (isinstance(x,Name)) and 
-                         (x.name == 'None')))
 
 def IsMetaMetaDict(AST):
     """
@@ -1578,6 +1586,7 @@ def getstringmetadata(X, metakeys, dialect):
     if hasattr(X,'metadata'):
         otherkeys = set(X.metadata.keys()).difference(dialist + 
                                ['names','coloring','types','formats','dialect'])
+
         for k in otherkeys:
             if k in X.metadata.keys():
                 metadata[k] = (X.metadata[k] if is_string_like(X.metadata[k]) 
@@ -1711,15 +1720,14 @@ def savebinary(fname, X, savecoloring=True):
             * otherwise, if `fname` is a ``.npz`` file, then `X` is zipped 
               inside of `fname` as ``data.npy``
 
-            **savecoloring** : boolean
+        **savecoloring** : boolean
 
-                Whether or not to save the `coloring` attribute of `X`.  If 
-                `savecoloring` is `True`, then `fname` must be a ``.npz`` 
-                archive and `X.coloring` is zipped inside of `fname` as 
-                ``coloring.npy``
+            Whether or not to save the `coloring` attribute of `X`.  If 
+            `savecoloring` is `True`, then `fname` must be a ``.npz`` archive 
+            and `X.coloring` is zipped inside of `fname` as ``coloring.npy``
 
-                See :func:`tabular.tab.tabarray.__new__` for more information 
-                about coloring.
+            See :func:`tabular.tab.tabarray.__new__` for more information about 
+            coloring.
 
     **See Also:**
 
@@ -1904,8 +1912,8 @@ def delete(to_delete):
 
     **See Also:**
 
-            `os <http://docs.python.org/library/os.html>`_, 
-            `shutil <http://docs.python.org/library/shutil.html>`_
+        `os <http://docs.python.org/library/os.html>`_, 
+        `shutil <http://docs.python.org/library/shutil.html>`_
 
     """
     if os.path.isfile(to_delete):
@@ -1922,14 +1930,14 @@ def makedir(dir_name):
 
     **Parameters**
 
-            **dir_name** :  string
+        **dir_name** :  string
 
-                    Path to a file directory that may or may not already exist.
+            Path to a file directory that may or may not already exist.
 
     **See Also:**
 
-            :func:`tabular.io.delete`, 
-            `os <http://docs.python.org/library/os.html>`_
+        :func:`tabular.io.delete`, 
+        `os <http://docs.python.org/library/os.html>`_
 
     """
     if os.path.exists(dir_name):
