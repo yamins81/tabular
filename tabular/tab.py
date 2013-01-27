@@ -43,24 +43,24 @@ def modifydocs(a, b, desc=''):
 
     **Parameters**
 
-            **a** :  class method
+		**a** :  class method
 
-                    Class method wrapping `b`.
+			Class method wrapping `b`.
 
-            **b** :  function
+		**b** :  function
 
-                    Function wrapped by `a`.
+			Function wrapped by `a`.
 
-            **desc** :  string, optional
+		**desc** :  string, optional
 
-                    Description of `b`, e.g. restructured text providing a link
-                    to the documentation for `b`.  Default is an empty string.
+			Description of `b`, e.g. restructured text providing a link to the 
+			documentation for `b`.  Default is an empty string.
 
     **Returns**
 
-            **newdoc** :  string
+		**newdoc** :  string
 
-                    New docstring for `a`.
+			New docstring for `a`.
 
     """
     newdoc = a.func_doc.replace('\t\t', '\t')
@@ -68,7 +68,7 @@ def modifydocs(a, b, desc=''):
     return newdoc
 
 def tab_colstack(ListOfTabArrays, mode='abort'):
-    '''
+    """
     "Horizontal stacking" of tabarrays, e.g. adding columns.
 
     Wrapper for :func:`tabular.spreadsheet.colstack` that deals with the 
@@ -76,14 +76,14 @@ def tab_colstack(ListOfTabArrays, mode='abort'):
 
     Method calls::
 
-            data = tabular.spreadsheet.colstack(ListOfTabArrays, mode=mode)
+        data = tabular.spreadsheet.colstack(ListOfTabArrays, mode=mode)
 
-    '''
-
-    data,naming = spreadsheet.colstack(ListOfTabArrays, mode=mode,returnnaming=True)
+    """
+    (data, naming) = spreadsheet.colstack(ListOfTabArrays, mode=mode, 
+                                          returnnaming=True)
         
     coloring = {}
-    for (i,a) in enumerate(ListOfTabArrays):
+    for (i, a) in enumerate(ListOfTabArrays):
         namedict = dict([(x,y) for (j,x,y) in naming if i == j])
         for k in a.coloring:
             s = [namedict[kk] for kk in a.coloring[k]]
@@ -106,7 +106,7 @@ tab_colstack.func_doc = modifydocs(tab_colstack, spreadsheet.colstack,
                                    ":func:`tabular.spreadsheet.colstack`")
 
 def tab_rowstack(ListOfTabArrays, mode='nulls'):
-    '''
+    """
     "Vertical stacking" of tabarrays, e.g. adding rows.
 
     Wrapper for :func:`tabular.spreadsheet.rowstack` that deals with the 
@@ -114,10 +114,9 @@ def tab_rowstack(ListOfTabArrays, mode='nulls'):
 
     Method calls::
 
-            data = tabular.spreadsheet.rowstack(ListOfTabArrays, mode=mode)
+        data = tabular.spreadsheet.rowstack(ListOfTabArrays, mode=mode)
 
-    '''
-
+    """
     data = spreadsheet.rowstack(ListOfTabArrays, mode=mode)
 
     coloring = {}

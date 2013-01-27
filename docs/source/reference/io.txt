@@ -3,15 +3,13 @@
 Input and Output
 ==================
 
-The **tabular** package supports reading and writing to three file formats:  delimited text files, numpy binary files, and the Hierarchical Separated Variable (HSV) format.
+The **tabular** package supports reading and writing to three file formats:  delimited text files and numpy binary files.
 
 Delimited text files are a very common format for storing tabular data.  In this format, each record of a tabular dataset is saved as a separate line, and values in each field are separated within lines by some chosen delimiter character(s).   The ubiquitous Comma-Separated Value files (CSVs) are delimited text in which the delimiter is the comma character, ','.    Delimited text files are easy to use, and are essentially human-readable/-writeable,  but may not be especially efficient in terms of memory.  
 
 Binary files are more efficient than text files.   However, because the efficiency of binary representations is achieved by using special encodings to compress the data, they are tricky to read and write and are highly  dependent on the details of the data structure being represented.  NumPy has its own binary format for storing record arrays. 
 
-The HSV file format represents a tabular data file as directory containing a separate file for each column of data.  Hierarchical groupings of columns, like those described by a tabarray's `coloring` attribute, are represented by nested directories.   The HSV format is useful if it is important to be able to load or create specific columns separately, without having to load/recreate the entire data set.   
-
-Files in each of these formats can be read into a tabarray by using the appropriate keyword to specify the file's path to the tabarray constructor: 'SVfile' for delimited text files, 'HSVfile' for HSV files, and 'binary' for NumPy binary files.   Tabarrays also come with methods to write out files to each of the formats -- 'saveSV', 'savebinary', and 'saveHSV'.    Details on the use of all these are given below.
+Files in each of these formats can be read into a tabarray by using the appropriate keyword to specify the file's path to the tabarray constructor: 'SVfile' for delimited text files and 'binary' for NumPy binary files.   Tabarrays also come with methods to write out files to each of the formats -- 'saveSV' and 'savebinary'.    Details on the use of all these are given below.
 
 
 
@@ -465,44 +463,3 @@ Load the ``.npz`` archive using the `binary` argument of the tabarray constructo
 >>> y.coloring
 {'info': ['color', 'size'], 'price': ['June', 'July']}
 
-
-
-.. _hsv-io:
-
-Hierarchical separated variable files
----------------------------------------------------------------------
-
-The Tabular package introduces a new file format to represent column-oriented hierarchical structure (e.g. as represented by the tabarray `coloring` attribute).  In this format, the data is stored in regular text files inside of directories whose file structure explicitly represents hierarchical structure on the columns. 
-
-A hierarchical separated variable (HSV) file is a directory containing a separate text file for each column of tabular data.  Groups of columns (e.g. columns in the same color group) are stored in subdirectories which are themselves HSV files. 
-
-Load the example data from above and save it as a HSV file.
-
->>> x = tb.tabarray(SVfile='example.tsv')
->>> x.saveHSV('example_nocolor.hsv')
-
-This produces a directory called 'example_nocolor.hsv' with 7 text files:  one for each column of data, plus a header file that orders the columns, ``header.txt``.  Notice that the data type of each column of data is stored in the name of the corresponding text file.
-
-.. image:: images/example_nocolor_hsv.png
-
-You can load back the data using the `HSVfile` argument of the tabarray constructor.
-
->>> tb.tabarray(HSVfile='example_nocolor.hsv')
-
-As above, suppose you wanted to use the `coloring` attribute to group the ``color`` and ``size`` columns under the coloring name ``info``, and the ``June`` and ``July`` columns under ``price``.  
-
->>> x.coloring = {'info': ['color', 'size'], 'price': ['June', 'July']}
-
-Save the example data, now with the `coloring` attribute giving hierarchical structure on the columns, to a HSV file. 
-
->>> x.saveHSV('example_color.hsv')
-
-This produces a directory called 'example_nocolor.hsv'.  Each column of data is still stored in a separate text file, but now columns corresponding to the same `coloring` key are grouped together in HSV subdirectories named by their `coloring`, and each HSV directory contains a ``header.txt`` file. 
-
-.. image:: images/example_color_hsv.png
-
-Now when you load this structured HSV file, the `coloring` is inferred from the file directory structure.
-
->>> tb.tabarray(HSVfile='example_color.hsv')
-
-Note that the HSV file format is of course not required for storing a tabarray's hierarchical structure, and the load and save methods can be used to read and write regular separated variable text files with hierarchical structure on the columns, as shown above. 
