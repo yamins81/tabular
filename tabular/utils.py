@@ -26,7 +26,7 @@ def uniqify(seq, idfun=None):
 
             **result** :  list
 
-                    Python list with first occurence of each item in `seq`, in 
+                    Python list with first occurence of each item in `seq`, in
                     order.
 
     """
@@ -110,8 +110,8 @@ def perminverse(s):
     X = np.array(range(len(s)))
     X[s] = range(len(s))
     return X
-    
-    
+
+
 def is_string_like(obj):
     """
     Check whether input object behaves like a string.
@@ -140,19 +140,19 @@ def is_string_like(obj):
 
 def listarraytranspose(L):
     '''
-    Tranposes the simple array presentation of a list of lists (of equal length). 
+    Tranposes the simple array presentation of a list of lists (of equal length).
     Argument:
         L = [row1, row2, ...., rowN]
-        where the rowi are python lists of equal length. 
-    Returns:    
-        LT, a list of python lists such that LT[j][i] = L[i][j]. 
+        where the rowi are python lists of equal length.
+    Returns:
+        LT, a list of python lists such that LT[j][i] = L[i][j].
     '''
     return [[row[i] for row in L] for i in range(len(L[0]))]
 
 
 def fromarrays(X, type=None, **kwargs):
     if 'dtype' in kwargs.keys() and kwargs['dtype'] and 'object':
-        _array = dtypecolumnloader(X, **kwargs)    
+        _array = dtypecolumnloader(X, **kwargs)
     else:
         try:
             _array = np.rec.fromarrays(X, **kwargs)
@@ -165,20 +165,20 @@ def fromarrays(X, type=None, **kwargs):
     if type is not None:
         _array = _array.view(type)
     return _array
-   
-   
+
+
 def fromrecords(X, type=None, **kwargs):
     if 'dtype' in kwargs.keys() and kwargs['dtype']:
         _array = np.array(X,dtype=kwargs['dtype'])
     else:
         try:
             _array = np.rec.fromrecords(X, **kwargs)
-        except (TypeError,ValueError):  
-            
+        except (TypeError,ValueError):
+
             if 'formats' in kwargs.keys() and kwargs['formats']:
                 formats = processformats(len(X[0]),kwargs['formats'])
                 if 'str' not in formats:
-                    dtype = getdtype(kwargs['names'] 
+                    dtype = getdtype(kwargs['names']
                           if 'names' in kwargs.keys() else None, formats)
                     _array = np.array(X,dtype=dtype)
                 else:
@@ -186,7 +186,7 @@ def fromrecords(X, type=None, **kwargs):
                                    **kwargs)
             else:
                 traceback.print_exc()
-                raise ValueError 
+                raise ValueError
     if type is not None:
         _array = _array.view(type)
     return _array
@@ -201,54 +201,55 @@ def fromkeypairs(kvpairs,dtype=None,fillingvalues=None):
     X = np.array(KVind, dtype = np.dtype([('Row', 'int'),
                                       ('Key', strt), ('Value', 'object')]))
     names = uniqify(X['Key'])
-    
+
     fvd = processvfd(fillingvalues,names = names)
-         
+
     realcols = []  ; realtypes = []
     new_version = np.version.short_version >= '1.4.0'
     for (i, n) in enumerate(names):
-        Xn = X[X['Key'] == n][['Row','Value']]
+        Rows = X[X['Key'] == n]['Row']
+        Values = X[X['Key'] == n]['Value']
 
-        MissingRows = np.invert(fast.isin(R,Xn['Row'])).nonzero()[0]       
-        Xnr = np.append(Xn['Row'],MissingRows)
+        MissingRows = np.invert(fast.isin(R, Rows)).nonzero()[0]
+        Xnr = np.append(Rows, MissingRows)
 
         if dtype:
             if new_version:
-                Xnv = np.array(Xn['Value'],dtype[n])
+                Xnv = np.array(Values, dtype[n])
             else:
-                Xnv = np.array(Xn['Value'].tolist(),dtype[n])
+                Xnv = np.array(Values.tolist(),dtype[n])
         else:
-            Xnv = np.array(Xn['Value'].tolist())
+            Xnv = np.array(Values.tolist())
         realtype = Xnv.dtype.descr[0][1]
         realtypes.append(realtype)
         fillval = DEFAULT_NULLVALUEFORMAT(realtype) if fvd[i] is None \
                else (fvd[i](Xnv) if hasattr(fvd[i], '__call__') else fvd[i])
-        MissingVals = len(MissingRows)*[fillval]      
+        MissingVals = len(MissingRows)*[fillval]
         Xnv = np.append(Xnv,MissingVals)
-        	
+
         s = Xnr.argsort()
         realcols.append(Xnv[s])
-    
+
     if not dtype:
         dtype = np.dtype(zip(names,realtypes))
-        
+
     return fromarrays(realcols,dtype=dtype)
-    
+
 
 def processvfd(fillingvalues, numbers=None, names=None):
     if (numbers or names):
         if not numbers:
             numbers = range(len(names))
-        if fillingvalues:    
+        if fillingvalues:
             if isinstance(fillingvalues,list) or \
                            isinstance(fillingvalues,tuple):
                vfd = dict([(n,
                      fillingvalues[i]) for (i,n) in enumerate(numbers)])
             elif isinstance(fillingvalues,dict):
                 intkeys = [k for k in fillingvalues.keys() if isinstance(k,int)]
-                vfd = dict([(k, v) for (k, v) in fillingvalues.items() 
+                vfd = dict([(k, v) for (k, v) in fillingvalues.items()
                                  if k in intkeys])
-                strkeys = [k for k in fillingvalues.keys() if isinstance(k,str)]            
+                strkeys = [k for k in fillingvalues.keys() if isinstance(k,str)]
                 if len(strkeys) > 0:
                     namedict = dict([(names[j],j) for j in numbers])
                     for n in strkeys:
@@ -257,11 +258,11 @@ def processvfd(fillingvalues, numbers=None, names=None):
                     if k not in vfd.keys():
                         vfd[k] = None
             else:
-                vfd = dict([(j, fillingvalues) for j in numbers])    
+                vfd = dict([(j, fillingvalues) for j in numbers])
         else:
             vfd = dict([(j, None) for j in numbers])
     else:
-        vfd = {} 
+        vfd = {}
     return vfd
 
 
@@ -292,10 +293,10 @@ def DEFAULT_NULLVALUEFORMAT(format):
 
                     Null value corresponding to the given format:
 
-                    *   if ``format.startswith(('<i', '|b'))``, e.g. `format` 
+                    *   if ``format.startswith(('<i', '|b'))``, e.g. `format`
                         corresponds to an integer or Boolean, return 0
 
-                    *   else if `format.startswith('<f')`, e.g. `format` 
+                    *   else if `format.startswith('<f')`, e.g. `format`
                         corresponds to a float, return 0.0
 
                     *   else, e.g. `format` corresponds to a string, return ''
@@ -304,8 +305,8 @@ def DEFAULT_NULLVALUEFORMAT(format):
     return 0 if format.startswith(('<i','|b')) \
            else 0.0 if format.startswith('<f') \
            else ''
-           
-           
+
+
 def DEFAULT_FILLVAL(format):
     return np.nan if format.startswith(('<i','|b','<f')) else ''
 
@@ -314,7 +315,7 @@ def DEFAULT_TYPEINFERER(column):
     """
     Infer the data type (int, float, str) of a list of strings.
 
-    Take a list of strings, and attempts to infer a numeric data type that fits 
+    Take a list of strings, and attempts to infer a numeric data type that fits
     them all.
 
     If the strings are all integers, returns a NumPy array of integers.
@@ -323,12 +324,12 @@ def DEFAULT_TYPEINFERER(column):
 
     Otherwise, returns a NumPy array of the original list of strings.
 
-    Used to determine the datatype of a column read from a separated-variable 
-    (CSV) text file (e.g. ``.tsv``, ``.csv``) of data where columns are 
+    Used to determine the datatype of a column read from a separated-variable
+    (CSV) text file (e.g. ``.tsv``, ``.csv``) of data where columns are
     expected to be of uniform Python type.
 
-    This function is used by tabular load functions for SV files, e.g. by 
-    :func`tabular.io.loadSV` when type information is not provided in the 
+    This function is used by tabular load functions for SV files, e.g. by
+    :func`tabular.io.loadSV` when type information is not provided in the
     header, and by :func:`tabular.io.loadSVsafe`.
 
     **Parameters**
@@ -349,7 +350,7 @@ def DEFAULT_TYPEINFERER(column):
         return np.array([int(x) for x in column], 'int')
     except:
         try:
-            return np.array([float(x) if x != '' else np.nan for x in column], 
+            return np.array([float(x) if x != '' else np.nan for x in column],
                             'float')
         except:
             return np.array(column, 'str')
@@ -362,7 +363,7 @@ def DEFAULT_STRINGIFIER(D):
     if D.dtype.name.startswith('str'):
         return D
     else:
-        return str(D.tolist()).strip('[]').replace('nan', '').split(', ') 
+        return str(D.tolist()).strip('[]').replace('nan', '').split(', ')
 
 
 def DEFAULT_NULLVALUE(test):
@@ -397,7 +398,7 @@ def dtypecolumnloader(X, **kwargs):
     kk = kwargs.copy()
     dtype = kk['dtype']
     assert len(dtype) == len(X), 'wrong dtypelength'
-    return np.rec.fromarrays([makearray(c,dtype[i]) 
+    return np.rec.fromarrays([makearray(c,dtype[i])
                                for (i, c) in enumerate(X)], **kk)
 
 
@@ -413,7 +414,7 @@ def formatscolumnloader(X, **kwargs):
 def makearray(c, t):
     return np.array(c, t)
 
-    
+
 def processformats(L, formats):
     if is_string_like(formats):
         formats = formats.split(',')
