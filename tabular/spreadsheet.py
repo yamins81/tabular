@@ -33,7 +33,8 @@ def isftype(x):
     return a or b or c or d
 
 def aggregate(X, On=None, AggFuncDict=None, AggFunc=None,
-              AggList=None, returnsort=False, KeepOthers=True):
+              AggList=None, returnsort=False, KeepOthers=True,
+              keyfuncdict=None):
     """
     Aggregate a ndarray with structured dtype (or recarray) on columns for 
     given functions.
@@ -122,7 +123,7 @@ def aggregate(X, On=None, AggFuncDict=None, AggFunc=None,
                     aggregation function for the `Off` columns not explicitly
                     listed in `AggFuncDict`.
                     
-            **AggFuncDict** :  list, optional
+            **AggList** :  list, optional
 
                     List of tuples 
 
@@ -236,7 +237,7 @@ def aggregate(X, On=None, AggFuncDict=None, AggFunc=None,
               'and neither summing nor concatenation works, so choosing ' 
               'first value by default.')
 
-    return strictaggregate(X,On,AggList,returnsort)        
+    return strictaggregate(X, On, AggList, returnsort, keyfuncdict)        
 
             
 def DefaultChooser(X,o,DC):
@@ -254,13 +255,21 @@ def DefaultChooser(X,o,DC):
             return lambda x : x[0]
             
             
-def strictaggregate(X,On,AggList,returnsort=False):
+def strictaggregate(X,On,AggList,returnsort=False, keyfuncdict=None):
 
     if len(On) > 0:
-        if len(On) == 1:
-            [D,index_array] = fast.recarrayuniqify(X[On[0]])
-        else:
-            [D,index_array] = fast.recarrayuniqify(X[On])
+        #if len(On) == 1:
+        #    keycols = X[On[0]]
+        #else:
+        #    keycols = X[On]
+        
+        keycols = X[On]
+        if keyfuncdict is not None:
+            for _kf in keyfuncdict:
+                fn = keyfuncdict[_kf]
+                keycols[_kf] = np.array(map(fn, keycols[_kf]))
+
+        [D, index_array] = fast.recarrayuniqify(keycols)
         X = X[index_array]
         Diffs = np.append(np.append([-1], D[1:].nonzero()[0]), [len(D)])
     else:

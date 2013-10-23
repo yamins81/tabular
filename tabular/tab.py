@@ -751,7 +751,7 @@ class tabarray(np.ndarray):
                                    ":func:`tabular.spreadsheet.rowstack`")
 
     def aggregate(self, On=None, AggFuncDict=None, AggFunc=None, AggList =
-                  None, returnsort=False,KeepOthers=True):
+                  None, returnsort=False,KeepOthers=True, keyfuncdict=None):
         """
         Aggregate a tabarray on columns for given functions.
 
@@ -761,13 +761,18 @@ class tabarray(np.ndarray):
 
         """
         if returnsort:
-            [data, s] = spreadsheet.aggregate(X=self, On=On, 
-                     AggFuncDict=AggFuncDict, AggFunc=AggFunc, 
-                     AggList=AggList, returnsort=returnsort)
+            [data, s] = spreadsheet.aggregate(X=self, 
+                     On=On, 
+                     AggFuncDict=AggFuncDict, 
+                     AggFunc=AggFunc, 
+                     AggList=AggList, 
+                     returnsort=returnsort, 
+                     keyfuncdict=keyfuncdict)
         else:
             data = spreadsheet.aggregate(X=self, On=On, AggFuncDict=AggFuncDict, 
                      AggFunc=AggFunc, AggList = AggList, returnsort=returnsort, 
-                     KeepOthers=KeepOthers)
+                     KeepOthers=KeepOthers,
+                     keyfuncdict=keyfuncdict)
         data = data.view(tabarray)
         data.coloring = self.coloring
         if returnsort:
